@@ -6,6 +6,7 @@ import { addDays } from "../src/domain/price-cache/calendar.ts";
 import { PriceCacheService } from "../src/services/PriceCacheService.ts";
 import { AlphaVantageMarketDataProviderClient } from "../src/storage/MarketDataProviderClient/AlphaVantageMarketDataProviderClient.ts";
 import { createMockAlphaVantageFetch } from "../src/storage/MarketDataProviderClient/mock/createMockAlphaVantageFetch.ts";
+import { priceCacheDbName } from "../src/storage/PriceCacheRepository/priceCacheDbName.ts";
 import { InMemoryPriceCacheRepository } from "../src/storage/PriceCacheRepository/InMemoryPriceCacheRepository.ts";
 
 // 2026-11-13 is a Friday.
@@ -330,5 +331,11 @@ describe("export and import", () => {
       );
     }
     assert.equal(await target.get("AAPL"), undefined);
+  });
+});
+
+describe("priceCacheDbName", () => {
+  it("keeps mock and live prices in different databases", () => {
+    assert.notEqual(priceCacheDbName("mock"), priceCacheDbName("live"));
   });
 });
