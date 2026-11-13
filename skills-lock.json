@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "skills": {
+    "cdk-layered-infrastructure": {
+      "source": "leopubcode/ai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/cdk-layered-infrastructure/SKILL.md",
+      "computedHash": "7f360f6283ebbb98fcb8f7a6dd832fc7c14da8f326b5e415e066f6638bb16157"
+    },
+    "layered-service-architecture": {
+      "source": "leopubcode/ai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/layered-service-architecture/SKILL.md",
+      "computedHash": "f5bdf09354c449133ffe3a5c1380edb5132e6a64e0bb6fb9a5701789a13ca099"
+    },
+    "no-use-effect": {
+      "source": "alejandrobailo/no-use-effect",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "75d06f792cb51747d0f9923eb3732ed3b6a476b1c4a607103c8834275825f78a"
+    },
+    "react-component-architecture": {
+      "source": "leopubcode/ai-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-component-architecture/SKILL.md",
+      "computedHash": "42a485fd736467d31673b20bfec0dbcec4e512816c4e1a90ed16b1207467215a"
+    }
+  }
+}
