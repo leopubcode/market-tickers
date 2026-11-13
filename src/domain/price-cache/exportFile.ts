@@ -12,7 +12,7 @@ export interface PriceCacheExport {
   format: typeof EXPORT_FORMAT;
   version: number;
   exportedAt: string;
-  /** MARKET_DATA_SOURCE the prices came from; mock and live data are never mixed. */
+  /** Source (mock or live) the prices came from; mock and live data are never mixed. */
   source: string;
   entries: CacheEntry[];
 }

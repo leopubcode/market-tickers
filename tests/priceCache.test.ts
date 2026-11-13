@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { loadMarketDataConfig } from "../src/config.ts";
 import { MarketDataError } from "../src/domain/market-data/marketDataProvider.ts";
 import { planFetches, planItemId } from "../src/domain/price-cache/fetchPlan.ts";
 import { applyFetch, COMPACT_LENGTH, type CacheEntry } from "../src/domain/price-cache/priceCache.ts";
@@ -410,16 +409,5 @@ describe("Alpha Vantage notices", () => {
       client("Our standard API rate limit is 25 requests per day.").getDailyPrices("IBM"),
       (e: MarketDataError) => e.code === "RATE_LIMITED",
     );
-  });
-});
-
-describe("loadMarketDataConfig fullHistory", () => {
-  const live = { MARKET_DATA_SOURCE: "live", ALPHA_VANTAGE_API_KEY: "k" };
-  it("defaults to true for mock and false for live, and can be overridden", () => {
-    assert.equal(loadMarketDataConfig({}).fullHistory, true);
-    assert.equal(loadMarketDataConfig(live).fullHistory, false);
-    assert.equal(loadMarketDataConfig({ ...live, ALPHA_VANTAGE_PREMIUM: "true" }).fullHistory, true);
-    assert.equal(loadMarketDataConfig({ ALPHA_VANTAGE_PREMIUM: "false" }).fullHistory, false);
-    assert.throws(() => loadMarketDataConfig({ ALPHA_VANTAGE_PREMIUM: "yes" }));
   });
 });

@@ -21,6 +21,11 @@ interface DashboardProps {
   /** The cache banner and its approval dialog. */
   cacheReport: ReactNode
   onOpenCacheReport: () => void
+  /** The settings dialog. */
+  settingsDialog: ReactNode
+  onOpenSettings: () => void
+  /** Discards the decrypted settings and asks for the password again. */
+  onLock: () => void
   split: boolean
   onToggleSplit: () => void
   /** Cards with negative performance; shown on the right when split. */
@@ -71,6 +76,9 @@ export function Dashboard({
   onSelectRange,
   cacheReport,
   onOpenCacheReport,
+  settingsDialog,
+  onOpenSettings,
+  onLock,
   split,
   onToggleSplit,
   negative,
@@ -107,10 +115,31 @@ export function Dashboard({
             <MenuIcon path="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
             {menuOpen && <span className="text-sm">Cache report</span>}
           </button>
+          <button
+            type="button"
+            title="Settings"
+            aria-label="Settings"
+            onClick={onOpenSettings}
+            className={menuItemClass}
+          >
+            <MenuIcon path="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
+            {menuOpen && <span className="text-sm">Settings</span>}
+          </button>
+          <button
+            type="button"
+            title="Lock"
+            aria-label="Lock"
+            onClick={onLock}
+            className={menuItemClass}
+          >
+            <MenuIcon path="M6 11h12v9H6zM8 11V8a4 4 0 118 0v3" />
+            {menuOpen && <span className="text-sm">Lock</span>}
+          </button>
         </nav>
       </aside>
       <main className="mx-auto flex min-w-0 max-w-[110rem] flex-1 flex-col gap-6 p-4 sm:p-8">
         {cacheReport}
+        {settingsDialog}
         <header className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-1" role="group" aria-label="Tickers">
             <button

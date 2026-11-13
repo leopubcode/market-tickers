@@ -11,12 +11,18 @@ import {
 import { rangeChange } from './performance.ts'
 import { deriveQuote } from '../../domain/price-cache/priceCache.ts'
 import { CacheReportContainer } from '../cache-report/CacheReportContainer.tsx'
+import { usePriceCache } from '../../session/PriceCacheContext.ts'
+import { useSession } from '../../session/SessionContext.tsx'
+import { SettingsDialogContainer } from '../vault/SettingsDialogContainer.tsx'
 import { cacheQuery, kindOf } from './queries.ts'
 import { TickerCard } from './TickerCard.tsx'
 import { usePersistedState } from './usePersistedState.ts'
 
 export default function DashboardPage() {
+  const priceCache = usePriceCache()
+  const { lock } = useSession()
   const cacheDialog = useRef<HTMLDialogElement>(null)
+  const settingsDialog = useRef<HTMLDialogElement>(null)
   const [selected, setSelected] = usePersistedState<string[]>(
     'ticker-stocks:selected',
     [WATCHLIST[0].symbol],
@@ -42,7 +48,7 @@ export default function DashboardPage() {
 
   // Same cache as the cards; used to give every chart the same All scale.
   const histories = useQueries({
-    queries: selected.map(cacheQuery),
+    queries: selected.map((symbol) => cacheQuery(priceCache, symbol)),
     combine: (results) => results.map((r) => r.data?.prices),
   })
   const allStart = histories
@@ -94,6 +100,9 @@ export default function DashboardPage() {
         />
       }
       onOpenCacheReport={() => cacheDialog.current?.showModal()}
+      settingsDialog={<SettingsDialogContainer dialogRef={settingsDialog} />}
+      onOpenSettings={() => settingsDialog.current?.showModal()}
+      onLock={lock}
       split={split}
       onToggleSplit={() => setSplit((v) => !v)}
       negative={selected

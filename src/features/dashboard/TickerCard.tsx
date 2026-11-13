@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '../../common/units/Skeleton.tsx'
 import { findGaps, reachableStart } from '../../domain/price-cache/fetchPlan.ts'
 import { deriveQuote, hasFullHistory } from '../../domain/price-cache/priceCache.ts'
-import { priceCache } from '../../priceCache.ts'
+import { usePriceCache } from '../../session/PriceCacheContext.ts'
 import { rangeStart, requestedStart, WATCHLIST, type Range } from './constants.ts'
 import { padPrices } from './padPrices.ts'
 import { rangeChange } from './performance.ts'
@@ -20,7 +20,8 @@ export function TickerCard({
   /** Earliest date across all shown tickers; the scale for the All range. */
   allStart?: string
 }) {
-  const cache = useQuery(cacheQuery(symbol))
+  const priceCache = usePriceCache()
+  const cache = useQuery(cacheQuery(priceCache, symbol))
   const entry = cache.data
   const daily = entry?.prices
   const name = WATCHLIST.find((w) => w.symbol === symbol)?.name

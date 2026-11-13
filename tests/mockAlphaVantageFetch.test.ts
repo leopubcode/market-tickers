@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { loadMarketDataConfig } from "../src/config.ts";
 import { MarketDataError } from "../src/domain/market-data/marketDataProvider.ts";
 import { AlphaVantageMarketDataProviderClient } from "../src/storage/MarketDataProviderClient/AlphaVantageMarketDataProviderClient.ts";
 import { createMockAlphaVantageFetch } from "../src/storage/MarketDataProviderClient/mock/createMockAlphaVantageFetch.ts";
@@ -60,17 +59,7 @@ describe("mock Alpha Vantage server", () => {
   });
 });
 
-describe("market data config", () => {
-  it("defaults to mock", () => {
-    assert.equal(loadMarketDataConfig({}).source, "mock");
-  });
-  it("requires a key for live", () => {
-    assert.throws(() => loadMarketDataConfig({ MARKET_DATA_SOURCE: "live" }));
-    assert.equal(loadMarketDataConfig({ MARKET_DATA_SOURCE: "live", ALPHA_VANTAGE_API_KEY: "k" }).source, "live");
-  });
-  it("rejects unknown sources", () => {
-    assert.throws(() => loadMarketDataConfig({ MARKET_DATA_SOURCE: "banana" }));
-  });
+describe("market data provider factory", () => {
   it("factory builds a working mock provider", async () => {
     const provider = createMarketDataProvider({ source: "mock", fullHistory: true });
     assert.equal((await provider.getQuote("KO")).symbol, "KO");

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type RefObject } from 'react'
 import { planCallId, type PlanTarget } from '../../domain/price-cache/fetchPlan.ts'
-import { priceCache } from '../../priceCache.ts'
+import { usePriceCache } from '../../session/PriceCacheContext.ts'
 import { downloadText } from '../../common/download.ts'
 import type { BuildOutcome } from '../../services/PriceCacheService.ts'
 import { requestedStart, WATCHLIST, type Range } from '../dashboard/constants.ts'
@@ -17,6 +17,7 @@ export function CacheReportContainer({
   /** The dialog element, so a menu elsewhere can open it. */
   dialogRef: RefObject<HTMLDialogElement | null>
 }) {
+  const priceCache = usePriceCache()
   const queryClient = useQueryClient()
   // Not persisted: a forgotten override would silently shrink every later range.
   const [fromDate, setFromDate] = useState('')

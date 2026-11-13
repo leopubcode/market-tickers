@@ -1,11 +1,12 @@
 import { MockDataBanner } from './common/units/MockDataBanner.tsx'
 import DashboardPage from './features/dashboard/DashboardPage.tsx'
-import { marketDataConfig } from './marketData.ts'
+import { useSession } from './session/SessionContext.tsx'
 
 function App() {
+  const { settings } = useSession()
   return (
     <>
-      {marketDataConfig.source === 'mock' && <MockDataBanner />}
+      {settings.source === 'mock' && <MockDataBanner />}
       <DashboardPage />
     </>
   )

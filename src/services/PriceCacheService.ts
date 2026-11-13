@@ -14,7 +14,7 @@ export interface BuildOutcome {
 export class PriceCacheService {
   private readonly repository: PriceCacheRepository;
   private readonly provider: MarketDataProvider;
-  /** MARKET_DATA_SOURCE the cache holds prices for; exports are tagged with it. */
+  /** Source (mock or live) the cache holds prices for; exports are tagged with it. */
   private readonly source: string;
   /** Whether stock history beyond the short call can be fetched. */
   readonly fullHistory: boolean;
