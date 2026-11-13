@@ -10,6 +10,16 @@ import {
 } from 'recharts'
 import type { DailyPrice } from '../../domain/market-data/marketDataProvider.ts'
 
+const dateFormat = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
+
+/** "2026-05-13" as "May 13, 2026". */
+const formatDate = (date: string) => dateFormat.format(new Date(`${date}T00:00:00Z`))
+
 export function PriceChart({ prices, up }: { prices: DailyPrice[]; up: boolean }) {
   const color = up ? 'var(--color-up)' : 'var(--color-down)'
   const fillId = `priceFill-${useId().replace(/:/g, '')}`
@@ -27,8 +37,8 @@ export function PriceChart({ prices, up }: { prices: DailyPrice[]; up: boolean }
           <XAxis
             dataKey="date"
             tick={{ fill: 'var(--color-body)', fontSize: 12 }}
-            tickFormatter={(d: string) => d.slice(5)}
-            minTickGap={32}
+            tickFormatter={formatDate}
+            minTickGap={48}
           />
           <YAxis
             domain={['auto', 'auto']}
@@ -41,6 +51,7 @@ export function PriceChart({ prices, up }: { prices: DailyPrice[]; up: boolean }
               background: 'var(--color-surface)',
               border: '1px solid var(--color-line)',
             }}
+            labelFormatter={(d) => formatDate(String(d))}
             formatter={(v) => [`$${Number(v).toFixed(2)}`, 'Close']}
           />
           <Area

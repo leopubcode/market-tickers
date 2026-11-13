@@ -4,10 +4,7 @@ import { planCallId, type PlanTarget } from '../../domain/price-cache/fetchPlan.
 import { priceCache } from '../../priceCache.ts'
 import type { BuildOutcome } from '../../services/PriceCacheService.ts'
 import { requestedStart, WATCHLIST, type Range } from '../dashboard/constants.ts'
-import { usePersistedState } from '../dashboard/usePersistedState.ts'
 import { CacheReport } from './CacheReport.tsx'
-
-const DAY = /^\d{4}-\d{2}-\d{2}$/
 
 export function CacheReportContainer({
   targets,
@@ -17,11 +14,8 @@ export function CacheReportContainer({
   range: Range
 }) {
   const queryClient = useQueryClient()
-  const [fromDate, setFromDate] = usePersistedState(
-    'ticker-stocks:cache-from',
-    '',
-    (v): v is string => typeof v === 'string' && (v === '' || DAY.test(v)),
-  )
+  // Not persisted: a forgotten override would silently shrink every later range.
+  const [fromDate, setFromDate] = useState('')
   const [approved, setApproved] = useState<string[]>([])
   const [outcomes, setOutcomes] = useState<Record<string, BuildOutcome>>({})
 

@@ -55,21 +55,23 @@ export function CacheReport({
 
   return (
     <>
-      {rows.length > 0 && (
+      {(rows.length > 0 || fromDate) && (
         <div
           role="status"
           className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-accent px-4 py-3 text-sm"
         >
           <span className="text-heading">
-            {plural(rows.length, 'API call is', 'API calls are')} needed to fill missing prices
-            for the selected tickers.
+            {rows.length > 0 &&
+              `${plural(rows.length, 'API call is', 'API calls are')} needed to fill missing prices for the selected tickers. `}
+            {fromDate &&
+              `Building is limited to days from ${fromDate}, so ranges that start earlier show fewer points.`}
           </span>
           <button
             type="button"
             onClick={() => dialog.current?.showModal()}
             className="rounded-md border border-accent px-3 py-1 text-heading"
           >
-            Review and approve
+            {rows.length > 0 ? 'Review and approve' : 'Open cache report'}
           </button>
         </div>
       )}
