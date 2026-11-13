@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '../../common/units/Skeleton.tsx'
-import { findGaps } from '../../domain/price-cache/fetchPlan.ts'
+import { findGaps, reachableStart } from '../../domain/price-cache/fetchPlan.ts'
 import { deriveQuote, hasFullHistory } from '../../domain/price-cache/priceCache.ts'
 import { priceCache } from '../../priceCache.ts'
 import { rangeStart, requestedStart, WATCHLIST, type Range } from './constants.ts'
@@ -33,10 +33,19 @@ export function TickerCard({
   // Only a fully cached history can be padded: otherwise a gap is missing data, not a later listing.
   const complete = entry ? hasFullHistory(entry) : false
   const today = priceCache.today()
+  const wanted = requestedStart(range, today)
+  // On the free plan stocks stop ~100 trading days back, however long the range is.
+  const limited =
+    reachableStart(kindOf(symbol), wanted, today, priceCache.fullHistory) !== wanted
   const gapped =
     entry !== undefined &&
     entry !== null &&
-    findGaps({ entry, kind: kindOf(symbol), start: requestedStart(range, today), today }).length > 0
+    findGaps({
+      entry,
+      kind: kindOf(symbol),
+      start: reachableStart(kindOf(symbol), wanted, today, priceCache.fullHistory),
+      today,
+    }).length > 0
   // The cache keeps newest first; charts read oldest to newest.
   const prices = daily
     ? (complete ? padPrices : (p: typeof daily) => p)(
@@ -72,6 +81,11 @@ export function TickerCard({
           {gapped && (
             <p className="text-xs">
               Some days in this range are not cached yet.
+            </p>
+          )}
+          {limited && (
+            <p className="text-xs">
+              Free plan: history is limited to the last ~100 trading days.
             </p>
           )}
           {prices && <PriceChart prices={prices} up={(change ?? 0) >= 0} />}

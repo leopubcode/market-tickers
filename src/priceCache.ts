@@ -6,6 +6,11 @@ import { createPriceCacheRepository } from './storage/createPriceCacheRepository
 export const priceCache = new PriceCacheService(
   createPriceCacheRepository(marketDataConfig),
   marketData,
-  marketDataConfig.source,
+  {
+    source: marketDataConfig.source,
+    fullHistory: marketDataConfig.fullHistory,
+    // The mock has no throttle; Alpha Vantage allows about one request per second.
+    requestSpacingMs: marketDataConfig.source === 'live' ? 1100 : 0,
+  },
   () => new Date(),
 )

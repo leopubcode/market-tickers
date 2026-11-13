@@ -81,10 +81,18 @@ export function planFetches(input: {
   entries: ReadonlyMap<string, CacheEntry>;
   start: string | null;
   today: string;
+  /** Whether stocks can be fetched further back than the short call reaches. */
+  fullHistory: boolean;
 }): PlanItem[] {
-  const { targets, entries, start, today } = input;
+  const { targets, entries, start, today, fullHistory } = input;
   const items = targets.flatMap(({ symbol, kind }) =>
-    planSymbol({ symbol, kind, entry: entries.get(symbol), start, today }),
+    planSymbol({
+      symbol,
+      kind,
+      entry: entries.get(symbol),
+      start: reachableStart(kind, start, today, fullHistory),
+      today,
+    }),
   );
 
   // Stable sort keeps the target order for ties. A shallower range wins a tie on recency.
@@ -112,6 +120,24 @@ function planSymbol(input: {
     outputSize: outputSizeFor(kind, range.from, latest),
   }));
 }
+
+/**
+ * The oldest day a symbol can be fetched for. Without full history, stocks only
+ * have the short call, so earlier days are not planned for; null means all history.
+ */
+export function reachableStart(
+  kind: AssetKind,
+  start: string | null,
+  today: string,
+  fullHistory: boolean,
+): string | null {
+  if (kind !== "stock" || fullHistory) return start;
+  const floor = shortCallStart(latestExpectedDay(kind, today));
+  return start === null || start < floor ? floor : start;
+}
+
+/** 100 weekdays reach back at least as far as 100 trading days. */
+const shortCallStart = (latest: string) => weekdaysBack(latest, COMPACT_LENGTH);
 
 /** Crypto trades every day, everything else on weekdays. */
 const latestExpectedDay = (kind: AssetKind, today: string) =>
@@ -158,6 +184,5 @@ export function findGaps(input: {
  */
 function outputSizeFor(kind: AssetKind, from: string | null, latest: string): OutputSize {
   if (kind !== "stock" || from === null) return "full";
-  // 100 weekdays reach back at least as far as 100 trading days.
-  return from >= weekdaysBack(latest, COMPACT_LENGTH) ? "compact" : "full";
+  return from >= shortCallStart(latest) ? "compact" : "full";
 }

@@ -16,18 +16,31 @@ export class PriceCacheService {
   private readonly provider: MarketDataProvider;
   /** MARKET_DATA_SOURCE the cache holds prices for; exports are tagged with it. */
   private readonly source: string;
+  /** Whether stock history beyond the short call can be fetched. */
+  readonly fullHistory: boolean;
+  private readonly requestSpacingMs: number;
   private readonly now: () => Date;
+  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(
     repository: PriceCacheRepository,
     provider: MarketDataProvider,
-    source: string,
+    options: {
+      source: string;
+      fullHistory: boolean;
+      /** Least time between the starts of two provider calls; live APIs throttle bursts. */
+      requestSpacingMs?: number;
+    },
     now: () => Date,
+    sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   ) {
     this.repository = repository;
     this.provider = provider;
-    this.source = source;
+    this.source = options.source;
+    this.fullHistory = options.fullHistory;
+    this.requestSpacingMs = options.requestSpacingMs ?? 0;
     this.now = now;
+    this.sleep = sleep;
   }
 
   today(): string {
@@ -85,11 +98,12 @@ export class PriceCacheService {
   async planRanges(targets: readonly PlanTarget[], start: string | null): Promise<PlanItem[]> {
     const found = await Promise.all(targets.map((t) => this.repository.get(t.symbol)));
     const entries = new Map(found.flatMap((e) => (e ? [[e.symbol, e] as const] : [])));
-    return planFetches({ targets, entries, start, today: this.today() });
+    return planFetches({ targets, entries, start, today: this.today(), fullHistory: this.fullHistory });
   }
 
   /**
-   * Runs the approved calls in the order given, one at a time. A rate limit
+   * Runs the approved calls in the order given, one at a time and spaced by
+   * the configured interval so a burst never trips the provider. A rate limit
    * ends the run, since every later call would be refused too.
    */
   async build(
@@ -103,11 +117,17 @@ export class PriceCacheService {
     };
 
     let rateLimited = false;
+    let lastStart: number | undefined;
     for (const call of calls) {
       if (rateLimited) {
         report({ symbol: call.symbol, status: "skipped", message: "Rate limit reached" });
         continue;
       }
+      if (lastStart !== undefined) {
+        const wait = lastStart + this.requestSpacingMs - Date.now();
+        if (wait > 0) await this.sleep(wait);
+      }
+      lastStart = Date.now();
       report({ symbol: call.symbol, status: "running" });
       try {
         await this.fetchInto(call);

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
+import { loadMarketDataConfig } from "../src/config.ts";
+import { MarketDataError } from "../src/domain/market-data/marketDataProvider.ts";
 import { planFetches, planItemId } from "../src/domain/price-cache/fetchPlan.ts";
 import { applyFetch, COMPACT_LENGTH, type CacheEntry } from "../src/domain/price-cache/priceCache.ts";
 import { addDays } from "../src/domain/price-cache/calendar.ts";
@@ -30,12 +32,14 @@ const plan = (
   start: string | null,
   targets = [stock("AAPL")],
   today = TODAY,
+  fullHistory = true,
 ) =>
   planFetches({
     targets,
     entries: new Map(entries.map((e) => [e.symbol, e])),
     start,
     today,
+    fullHistory,
   });
 
 describe("planFetches", () => {
@@ -123,6 +127,35 @@ describe("planFetches", () => {
     );
   });
 
+  describe("without full history (free plan)", () => {
+    it("never plans stocks further back than the short call reaches", () => {
+      for (const start of ["2020-01-01", null]) {
+        const [item, ...rest] = plan([], start, [stock("AAPL")], TODAY, false);
+        assert.equal(rest.length, 0);
+        assert.equal(item.outputSize, "compact");
+        // 100 weekdays before Friday 2026-11-13.
+        assert.deepEqual(item.range, { from: "2026-06-26", to: TODAY });
+      }
+    });
+
+    it("leaves recent ranges and other kinds alone", () => {
+      assert.deepEqual(plan([], "2026-10-05", [stock("AAPL")], TODAY, false)[0].range.from, "2026-10-05");
+      const btc = planFetches({
+        targets: [{ symbol: "BTC", kind: "crypto" }],
+        entries: new Map(),
+        start: null,
+        today: TODAY,
+        fullHistory: false,
+      });
+      assert.deepEqual(btc[0].range, { from: null, to: TODAY });
+    });
+
+    it("plans nothing once the reachable days are cached", () => {
+      const e = entry("AAPL", { from: "2026-06-26" });
+      assert.deepEqual(plan([e], null, [stock("AAPL")], TODAY, false), []);
+    });
+  });
+
   it("treats crypto as trading every day", () => {
     const e = entry("BTC", { fetchedOn: "2026-11-13" });
     const items = planFetches({
@@ -130,6 +163,7 @@ describe("planFetches", () => {
       entries: new Map([["BTC", e]]),
       start: "2026-10-01",
       today: "2026-11-14",
+      fullHistory: true,
     });
     assert.equal(items[0].outputSize, "full");
     assert.equal(items[0].range.to, "2026-11-14");
@@ -195,7 +229,7 @@ describe("PriceCacheService", () => {
       return fetchFn(...args);
     }) as typeof fetch;
     const provider = new AlphaVantageMarketDataProviderClient({ apiKey: "mock" }, counting);
-    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, "mock", now);
+    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, { source: "mock", fullHistory: true }, now);
     return { service, calls: () => calls };
   };
 
@@ -233,7 +267,7 @@ describe("PriceCacheService", () => {
     const later = new PriceCacheService(
       (service as unknown as { repository: InMemoryPriceCacheRepository }).repository,
       (service as unknown as { provider: AlphaVantageMarketDataProviderClient }).provider,
-      "mock",
+      { source: "mock", fullHistory: true },
       () => new Date("2026-11-17T12:00:00Z"),
     );
     const items = await later.plan([stock("AAPL")], "2020-01-01");
@@ -251,6 +285,26 @@ describe("PriceCacheService", () => {
     const { service } = setup();
     const [call] = await service.plan([stock("AAPL")], "2026-11-12");
     assert.equal(service.describe(call), "function=TIME_SERIES_DAILY symbol=AAPL outputsize=compact");
+  });
+
+  it("waits between provider calls", async () => {
+    const waits: number[] = [];
+    const fetchFn = createMockAlphaVantageFetch({ latencyMs: 0, now });
+    const provider = new AlphaVantageMarketDataProviderClient({ apiKey: "mock" }, fetchFn);
+    const service = new PriceCacheService(
+      new InMemoryPriceCacheRepository(),
+      provider,
+      { source: "mock", fullHistory: true, requestSpacingMs: 1000 },
+      now,
+      async (ms) => {
+        waits.push(ms);
+      },
+    );
+    const items = await service.plan([stock("AAPL"), stock("MSFT"), stock("NVDA")], "2026-11-09");
+    await service.build(items);
+    // No wait before the first call, one before each of the others.
+    assert.equal(waits.length, 2);
+    assert.ok(waits.every((ms) => ms > 900 && ms <= 1000));
   });
 
   it("reports a failed call and keeps going", async () => {
@@ -271,7 +325,7 @@ describe("export and import", () => {
       { apiKey: "mock" },
       createMockAlphaVantageFetch({ latencyMs: 0, now }),
     );
-    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, source, now);
+    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, { source, fullHistory: true }, now);
     await service.build(await service.plan([stock("AAPL"), stock("MSFT")], "2026-11-09"));
     return service;
   };
@@ -279,7 +333,7 @@ describe("export and import", () => {
     new PriceCacheService(
       new InMemoryPriceCacheRepository(),
       new AlphaVantageMarketDataProviderClient({ apiKey: "mock" }, createMockAlphaVantageFetch()),
-      "mock",
+      { source: "mock", fullHistory: true },
       now,
     );
 
@@ -337,5 +391,35 @@ describe("export and import", () => {
 describe("priceCacheDbName", () => {
   it("keeps mock and live prices in different databases", () => {
     assert.notEqual(priceCacheDbName("mock"), priceCacheDbName("live"));
+  });
+});
+
+describe("Alpha Vantage notices", () => {
+  const client = (message: string) =>
+    new AlphaVantageMarketDataProviderClient(
+      { apiKey: "k" },
+      (async () => Response.json({ Information: message })) as unknown as typeof fetch,
+    );
+
+  it("tells a premium-only parameter apart from a rate limit", async () => {
+    await assert.rejects(
+      client("The outputsize=full parameter value is a premium feature for the TIME_SERIES_DAILY endpoint.").getDailyPrices("IBM", { outputSize: "full" }),
+      (e: MarketDataError) => e.code === "PREMIUM_REQUIRED",
+    );
+    await assert.rejects(
+      client("Our standard API rate limit is 25 requests per day.").getDailyPrices("IBM"),
+      (e: MarketDataError) => e.code === "RATE_LIMITED",
+    );
+  });
+});
+
+describe("loadMarketDataConfig fullHistory", () => {
+  const live = { MARKET_DATA_SOURCE: "live", ALPHA_VANTAGE_API_KEY: "k" };
+  it("defaults to true for mock and false for live, and can be overridden", () => {
+    assert.equal(loadMarketDataConfig({}).fullHistory, true);
+    assert.equal(loadMarketDataConfig(live).fullHistory, false);
+    assert.equal(loadMarketDataConfig({ ...live, ALPHA_VANTAGE_PREMIUM: "true" }).fullHistory, true);
+    assert.equal(loadMarketDataConfig({ ALPHA_VANTAGE_PREMIUM: "false" }).fullHistory, false);
+    assert.throws(() => loadMarketDataConfig({ ALPHA_VANTAGE_PREMIUM: "yes" }));
   });
 });

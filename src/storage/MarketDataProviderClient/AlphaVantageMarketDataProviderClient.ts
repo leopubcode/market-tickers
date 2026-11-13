@@ -188,7 +188,8 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
     }
     const notice = body["Note"] ?? body["Information"];
     if (typeof notice === "string") {
-      throw new MarketDataError("RATE_LIMITED", notice);
+      // The same field carries "premium feature" notices, which a retry cannot fix.
+      throw new MarketDataError(/premium/i.test(notice) ? "PREMIUM_REQUIRED" : "RATE_LIMITED", notice);
     }
     return body;
   }

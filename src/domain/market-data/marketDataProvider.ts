@@ -23,6 +23,7 @@ export interface DailyPrice {
 
 export type MarketDataErrorCode =
   | "RATE_LIMITED"
+  | "PREMIUM_REQUIRED"
   | "SYMBOL_NOT_FOUND"
   | "REQUEST_FAILED"
   | "INVALID_RESPONSE";

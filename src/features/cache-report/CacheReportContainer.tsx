@@ -87,6 +87,7 @@ export function CacheReportContainer({
         outcome: outcomes[call.symbol],
       }))}
       planStart={start ?? undefined}
+      fullHistory={priceCache.fullHistory}
       fromDate={fromDate}
       onChangeFromDate={setFromDate}
       approved={approved}

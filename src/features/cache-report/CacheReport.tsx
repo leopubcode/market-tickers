@@ -24,6 +24,8 @@ interface CacheReportProps {
   rows: readonly ReportRow[]
   /** Oldest day the plan covers, or undefined for all history. */
   planStart?: string
+  /** False on the free plan, where stocks only reach back ~100 trading days. */
+  fullHistory: boolean
   fromDate: string
   onChangeFromDate: (date: string) => void
   /** Ids of the approved calls. */
@@ -51,6 +53,7 @@ export function CacheReport({
   error,
   rows,
   planStart,
+  fullHistory,
   fromDate,
   onChangeFromDate,
   approved,
@@ -133,6 +136,12 @@ export function CacheReport({
           </label>
 
           {error && <ErrorBanner message={error.message} />}
+          {!fullHistory && (
+            <p className="text-xs">
+              Free plan: stock history can only be fetched for the last ~100 trading days, so
+              earlier days are not listed. Set ALPHA_VANTAGE_PREMIUM=true to unlock full history.
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm">
             <span>Backup</span>

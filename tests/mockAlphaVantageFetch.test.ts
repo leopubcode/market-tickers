@@ -72,7 +72,7 @@ describe("market data config", () => {
     assert.throws(() => loadMarketDataConfig({ MARKET_DATA_SOURCE: "banana" }));
   });
   it("factory builds a working mock provider", async () => {
-    const provider = createMarketDataProvider({ source: "mock" });
+    const provider = createMarketDataProvider({ source: "mock", fullHistory: true });
     assert.equal((await provider.getQuote("KO")).symbol, "KO");
   });
 });
