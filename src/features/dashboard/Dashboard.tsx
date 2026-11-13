@@ -18,6 +18,8 @@ interface DashboardProps {
   ranges: readonly Range[]
   range: Range
   onSelectRange: (key: RangeKey) => void
+  /** The cache banner and its approval dialog. */
+  cacheReport: ReactNode
   split: boolean
   onToggleSplit: () => void
   /** Cards with negative performance; shown on the right when split. */
@@ -46,6 +48,7 @@ export function Dashboard({
   ranges,
   range,
   onSelectRange,
+  cacheReport,
   split,
   onToggleSplit,
   negative,
@@ -55,6 +58,7 @@ export function Dashboard({
   const sideColumns = Math.max(1, Math.ceil(columns / 2)) as GridColumns
   return (
     <main className="mx-auto flex max-w-[110rem] flex-col gap-6 p-4 sm:p-8">
+      {cacheReport}
       <header className="flex flex-col gap-4">
         <h1 className="text-2xl font-medium text-heading">Ticker Stocks</h1>
         <div className="flex flex-wrap gap-1" role="group" aria-label="Tickers">

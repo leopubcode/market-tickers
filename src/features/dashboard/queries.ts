@@ -1,19 +1,15 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { AssetKind } from '../../domain/market-data/marketDataProvider.ts'
-import { marketData } from '../../marketData.ts'
+import { priceCache } from '../../priceCache.ts'
 import { WATCHLIST } from './constants.ts'
 
-const kindOf = (symbol: string): AssetKind =>
+export const kindOf = (symbol: string): AssetKind =>
   WATCHLIST.find((w) => w.symbol === symbol)?.kind ?? 'stock'
 
-export const quoteQuery = (symbol: string) =>
+/** Reads only the local cache; the provider is called when a cache build is approved. */
+export const cacheQuery = (symbol: string) =>
   queryOptions({
-    queryKey: ['quote', symbol],
-    queryFn: () => marketData.getQuote(symbol, kindOf(symbol)),
-  })
-
-export const dailyQuery = (symbol: string) =>
-  queryOptions({
-    queryKey: ['daily', symbol],
-    queryFn: () => marketData.getDailyPrices(symbol, { kind: kindOf(symbol), outputSize: 'full' }),
+    queryKey: ['cache', symbol],
+    queryFn: async () => (await priceCache.get(symbol)) ?? null,
+    staleTime: Infinity,
   })

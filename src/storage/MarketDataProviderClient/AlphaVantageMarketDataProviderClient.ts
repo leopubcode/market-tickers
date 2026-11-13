@@ -72,6 +72,26 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
     return options.limit === undefined ? prices : prices.slice(0, options.limit);
   }
 
+  describeDailyPricesRequest(
+    symbol: string,
+    options: { kind?: AssetKind; outputSize?: "compact" | "full" } = {},
+  ): string {
+    const params = this.dailyParams(symbol, options.kind ?? "stock", options.outputSize ?? "compact");
+    return new URLSearchParams(params).toString().replaceAll("&", " ");
+  }
+
+  private dailyParams(symbol: string, kind: AssetKind, outputSize: string): Record<string, string> {
+    if (kind === "crypto") return { function: "DIGITAL_CURRENCY_DAILY", symbol, market: "USD" };
+    if (kind === "commodity") {
+      const params = COMMODITY_REQUESTS[symbol.toUpperCase()];
+      if (!params) {
+        throw new MarketDataError("SYMBOL_NOT_FOUND", `Unsupported commodity ${symbol}`);
+      }
+      return params;
+    }
+    return { function: "TIME_SERIES_DAILY", symbol, outputsize: outputSize };
+  }
+
   /** Crypto and commodities have no quote endpoint worth the extra call; use the last two days. */
   private async deriveQuote(symbol: string, kind: AssetKind): Promise<Quote> {
     const [latest, previous] = await this.getDailyPrices(symbol, { kind, limit: 2 });
@@ -93,11 +113,7 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
   }
 
   private async fetchStockDaily(symbol: string, outputSize: string): Promise<DailyPrice[]> {
-    const body = await this.request({
-      function: "TIME_SERIES_DAILY",
-      symbol,
-      outputsize: outputSize,
-    });
+    const body = await this.request(this.dailyParams(symbol, "stock", outputSize));
     const series = body["Time Series (Daily)"] as
       | Record<string, Record<string, string>>
       | undefined;
@@ -114,7 +130,7 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
   }
 
   private async fetchCryptoDaily(symbol: string): Promise<DailyPrice[]> {
-    const body = await this.request({ function: "DIGITAL_CURRENCY_DAILY", symbol, market: "USD" });
+    const body = await this.request(this.dailyParams(symbol, "crypto", "full"));
     const series = body["Time Series (Digital Currency Daily)"] as
       | Record<string, Record<string, string>>
       | undefined;
@@ -134,11 +150,7 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
   }
 
   private async fetchCommodityDaily(symbol: string): Promise<DailyPrice[]> {
-    const params = COMMODITY_REQUESTS[symbol.toUpperCase()];
-    if (!params) {
-      throw new MarketDataError("SYMBOL_NOT_FOUND", `Unsupported commodity ${symbol}`);
-    }
-    const body = await this.request(params);
+    const body = await this.request(this.dailyParams(symbol, "commodity", "full"));
     const data = body["data"] as { date: string; price?: string; value?: string }[] | undefined;
     if (!Array.isArray(data)) {
       throw new MarketDataError("INVALID_RESPONSE", "Missing commodity data");

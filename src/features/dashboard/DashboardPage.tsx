@@ -8,7 +8,9 @@ import {
   type RangeKey,
 } from './constants.ts'
 import { rangeChange } from './performance.ts'
-import { dailyQuery, quoteQuery } from './queries.ts'
+import { deriveQuote } from '../../domain/price-cache/priceCache.ts'
+import { CacheReportContainer } from '../cache-report/CacheReportContainer.tsx'
+import { cacheQuery, kindOf } from './queries.ts'
 import { TickerCard } from './TickerCard.tsx'
 import { usePersistedState } from './usePersistedState.ts'
 
@@ -36,31 +38,25 @@ export default function DashboardPage() {
     (v): v is RangeKey => RANGES.some((r) => r.key === v),
   )
 
-  // Shares the card queries' cache; used to give every chart the same All scale.
-  const allStart = useQueries({
-    queries: selected.map(dailyQuery),
-    combine: (results) =>
-      results
-        .map((r) => r.data?.at(-1)?.date)
-        .filter((d): d is string => d !== undefined)
-        .sort()[0],
+  // Same cache as the cards; used to give every chart the same All scale.
+  const histories = useQueries({
+    queries: selected.map(cacheQuery),
+    combine: (results) => results.map((r) => r.data?.prices),
   })
+  const allStart = histories
+    .map((h) => h?.at(-1)?.date)
+    .filter((d): d is string => d !== undefined)
+    .sort()[0]
 
   const range = RANGES.find((r) => r.key === rangeKey)!
 
-  // Same cache as the cards; decides which side each chart lands on.
-  const prices = useQueries({
-    queries: selected.map(quoteQuery),
-    combine: (results) => results.map((r) => r.data?.price),
-  })
-  const histories = useQueries({
-    queries: selected.map(dailyQuery),
-    combine: (results) => results.map((r) => r.data),
-  })
+  // Decides which side each chart lands on.
   const losers = new Set(
-    selected.filter(
-      (_, i) => (rangeChange(prices[i], histories[i], range, allStart)?.change ?? 0) < 0,
-    ),
+    selected.filter((symbol, i) => {
+      const history = histories[i]
+      const price = history && deriveQuote(symbol, history)?.price
+      return (rangeChange(price, history, range, allStart)?.change ?? 0) < 0
+    }),
   )
 
   const toggleSymbol = (symbol: string) =>
@@ -88,6 +84,12 @@ export default function DashboardPage() {
       ranges={RANGES}
       range={range}
       onSelectRange={setRangeKey}
+      cacheReport={
+        <CacheReportContainer
+          targets={selected.map((symbol) => ({ symbol, kind: kindOf(symbol) }))}
+          range={range}
+        />
+      }
       split={split}
       onToggleSplit={() => setSplit((v) => !v)}
       negative={selected

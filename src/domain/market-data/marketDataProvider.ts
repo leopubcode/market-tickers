@@ -47,4 +47,9 @@ export interface MarketDataProvider {
     symbol: string,
     options?: { kind?: AssetKind; limit?: number; outputSize?: "compact" | "full" },
   ): Promise<DailyPrice[]>;
+  /** The request `getDailyPrices` sends, without credentials, for showing to the user. */
+  describeDailyPricesRequest(
+    symbol: string,
+    options?: { kind?: AssetKind; outputSize?: "compact" | "full" },
+  ): string;
 }

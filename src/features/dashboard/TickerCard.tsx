@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { ErrorBanner } from '../../common/units/ErrorBanner.tsx'
 import { Skeleton } from '../../common/units/Skeleton.tsx'
-import { rangeStart, WATCHLIST, type Range } from './constants.ts'
+import { findGaps } from '../../domain/price-cache/fetchPlan.ts'
+import { deriveQuote, hasFullHistory } from '../../domain/price-cache/priceCache.ts'
+import { priceCache } from '../../priceCache.ts'
+import { rangeStart, requestedStart, WATCHLIST, type Range } from './constants.ts'
 import { padPrices } from './padPrices.ts'
 import { rangeChange } from './performance.ts'
 import { PriceChart } from './PriceChart.tsx'
-import { dailyQuery, quoteQuery } from './queries.ts'
+import { cacheQuery, kindOf } from './queries.ts'
 import { QuoteSummary } from './QuoteSummary.tsx'
 
 export function TickerCard({
@@ -18,46 +20,61 @@ export function TickerCard({
   /** Earliest date across all shown tickers; the scale for the All range. */
   allStart?: string
 }) {
-  const quote = useQuery(quoteQuery(symbol))
-  const daily = useQuery(dailyQuery(symbol))
+  const cache = useQuery(cacheQuery(symbol))
+  const entry = cache.data
+  const daily = entry?.prices
+  const name = WATCHLIST.find((w) => w.symbol === symbol)?.name
 
-  const error = quote.error ?? daily.error
-  const performance = rangeChange(quote.data?.price, daily.data, range, allStart)
+  const quote = daily && deriveQuote(symbol, daily)
+  const performance = rangeChange(quote?.price, daily, range, allStart)
   const change = performance?.change
   const changePercent = performance?.changePercent
-  const start = daily.data ? (rangeStart(range, daily.data) ?? allStart) : undefined
-  // The provider returns newest first; charts read oldest to newest.
-  const prices = daily.data
-    ? padPrices(
-        daily.data
-          .filter((p) => start === undefined || p.date >= start)
-          .reverse(),
+  const start = daily ? (rangeStart(range, daily) ?? allStart) : undefined
+  // Only a fully cached history can be padded: otherwise a gap is missing data, not a later listing.
+  const complete = entry ? hasFullHistory(entry) : false
+  const today = priceCache.today()
+  const gapped =
+    entry !== undefined &&
+    entry !== null &&
+    findGaps({ entry, kind: kindOf(symbol), start: requestedStart(range, today), today }).length > 0
+  // The cache keeps newest first; charts read oldest to newest.
+  const prices = daily
+    ? (complete ? padPrices : (p: typeof daily) => p)(
+        daily.filter((p) => start === undefined || p.date >= start).reverse(),
         start,
       )
     : undefined
 
   return (
     <article className="flex min-w-0 flex-col gap-3 rounded-md border border-line p-4">
-      {error && <ErrorBanner message={error.message} />}
-      {quote.isPending || daily.isPending ? (
+      {cache.isPending ? (
         <>
           <Skeleton className="h-16" />
           <Skeleton className="h-64" />
         </>
+      ) : !entry ? (
+        <div className="flex flex-col">
+          <h2 className="text-xl font-medium text-heading">{symbol}</h2>
+          {name && <span className="text-sm">{name}</span>}
+          <p className="mt-3 text-sm">Not cached yet. Approve its fetch in the cache report.</p>
+        </div>
       ) : (
         <>
-          {quote.data && change !== undefined && changePercent !== undefined && (
+          {quote && change !== undefined && changePercent !== undefined && (
             <QuoteSummary
-              quote={quote.data}
-              name={WATCHLIST.find((w) => w.symbol === symbol)?.name}
+              quote={quote}
+              name={name}
               change={change}
               changePercent={changePercent}
               rangeLabel={range.label}
             />
           )}
-          {prices && (
-            <PriceChart prices={prices} up={(change ?? 0) >= 0} />
+          {gapped && (
+            <p className="text-xs">
+              Some days in this range are not cached yet.
+            </p>
           )}
+          {prices && <PriceChart prices={prices} up={(change ?? 0) >= 0} />}
         </>
       )}
     </article>

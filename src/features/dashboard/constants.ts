@@ -1,4 +1,5 @@
 import type { AssetKind, DailyPrice } from '../../domain/market-data/marketDataProvider.ts'
+import { addDays, latestWeekday, weekdaysBack } from '../../domain/price-cache/calendar.ts'
 
 type WatchlistEntry = { symbol: string; name: string; kind?: AssetKind }
 
@@ -60,6 +61,21 @@ export function rangeStart(range: Range, prices: readonly DailyPrice[]): string 
   const d = new Date(`${latestDate}T00:00:00Z`)
   d.setUTCMonth(d.getUTCMonth() - range.months)
   return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Oldest day the cache must hold for the range, or null for all history. A few
+ * days of slack keep the close before the range, which the change is measured from.
+ */
+export function requestedStart(range: Range, today: string): string | null {
+  if ('tradingDays' in range) {
+    return addDays(weekdaysBack(latestWeekday(today), range.tradingDays), -5)
+  }
+  if ('ytd' in range) return addDays(`${today.slice(0, 4)}-01-01`, -5)
+  if (!('months' in range)) return null
+  const d = new Date(`${today}T00:00:00Z`)
+  d.setUTCMonth(d.getUTCMonth() - range.months)
+  return addDays(d.toISOString().slice(0, 10), -5)
 }
 
 export const GRID_COLUMNS = [1, 2, 3, 4, 5, 6] as const
