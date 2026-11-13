@@ -25,11 +25,6 @@ export default function DashboardPage() {
     2,
     (v): v is GridColumns => GRID_COLUMNS.some((c) => c === v),
   )
-  const [showVolume, setShowVolume] = usePersistedState(
-    'ticker-stocks:showVolume',
-    true,
-    (v): v is boolean => typeof v === 'boolean',
-  )
   const [split, setSplit] = usePersistedState(
     'ticker-stocks:split',
     false,
@@ -79,7 +74,7 @@ export default function DashboardPage() {
     )
 
   const renderCard = (symbol: string) => (
-    <TickerCard key={symbol} symbol={symbol} range={range} allStart={allStart} showVolume={showVolume} />
+    <TickerCard key={symbol} symbol={symbol} range={range} allStart={allStart} />
   )
 
   return (
@@ -93,8 +88,6 @@ export default function DashboardPage() {
       ranges={RANGES}
       range={range}
       onSelectRange={setRangeKey}
-      showVolume={showVolume}
-      onToggleVolume={() => setShowVolume((v) => !v)}
       split={split}
       onToggleSplit={() => setSplit((v) => !v)}
       negative={selected

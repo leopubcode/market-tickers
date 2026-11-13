@@ -29,7 +29,6 @@ describe("mock Alpha Vantage server", () => {
       const dow = new Date(p.date + "T00:00:00Z").getUTCDay();
       assert.ok(dow !== 0 && dow !== 6);
       assert.ok(p.high >= Math.max(p.open, p.close) && p.low <= Math.min(p.open, p.close));
-      assert.ok(p.volume > 0);
     }
   });
 
@@ -82,7 +81,6 @@ describe("crypto and commodities", () => {
   it("serves bitcoin from the digital currency endpoint", async () => {
     const prices = await client.getDailyPrices("BTC", { kind: "crypto", limit: 5 });
     assert.equal(prices.length, 5);
-    assert.ok(prices[0].volume > 0);
     const q = await client.getQuote("BTC", "crypto");
     assert.equal(q.symbol, "BTC");
     assert.ok(Math.abs(q.price - 95_000) < 1e-6);
@@ -95,7 +93,6 @@ describe("crypto and commodities", () => {
       assert.equal(prices[0].date, "2026-11-13");
       assert.ok(Math.abs(prices[0].close - last) < 1e-6);
       assert.equal(prices[0].open, prices[0].close);
-      assert.equal(prices[0].volume, 0);
       assert.equal((await client.getQuote(symbol, "commodity")).symbol, symbol);
     }
   });

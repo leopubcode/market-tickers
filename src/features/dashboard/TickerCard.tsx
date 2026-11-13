@@ -7,19 +7,16 @@ import { rangeChange } from './performance.ts'
 import { PriceChart } from './PriceChart.tsx'
 import { dailyQuery, quoteQuery } from './queries.ts'
 import { QuoteSummary } from './QuoteSummary.tsx'
-import { VolumeChart } from './VolumeChart.tsx'
 
 export function TickerCard({
   symbol,
   range,
   allStart,
-  showVolume,
 }: {
   symbol: string
   range: Range
   /** Earliest date across all shown tickers; the scale for the All range. */
   allStart?: string
-  showVolume: boolean
 }) {
   const quote = useQuery(quoteQuery(symbol))
   const daily = useQuery(dailyQuery(symbol))
@@ -46,7 +43,6 @@ export function TickerCard({
         <>
           <Skeleton className="h-16" />
           <Skeleton className="h-64" />
-          {showVolume && <Skeleton className="h-24" />}
         </>
       ) : (
         <>
@@ -60,10 +56,7 @@ export function TickerCard({
             />
           )}
           {prices && (
-            <>
-              <PriceChart prices={prices} up={(change ?? 0) >= 0} />
-              {showVolume && <VolumeChart prices={prices} />}
-            </>
+            <PriceChart prices={prices} up={(change ?? 0) >= 0} />
           )}
         </>
       )}

@@ -6,7 +6,6 @@ export interface MockDay {
   high: number;
   low: number;
   close: number;
-  volume: number;
 }
 
 // ~10.5 years of trading days, enough for outputsize=full.
@@ -84,12 +83,8 @@ export function generateSeries(profile: TickerProfile, dates: string[]): MockDay
   return dates.map((date, i) => {
     const close = closes[i];
     const open = i === 0 ? close : closes[i - 1] * (1 + 0.25 * profile.volatility * gaussian(rand));
-    const ret = i === 0 ? 0 : Math.abs(close / closes[i - 1] - 1);
     const high = Math.max(open, close) * (1 + Math.abs(gaussian(rand)) * 0.3 * profile.volatility);
     const low = Math.min(open, close) * (1 - Math.abs(gaussian(rand)) * 0.3 * profile.volatility);
-    const volume = Math.round(
-      profile.baseVolume * Math.exp(0.3 * gaussian(rand)) * (1 + (ret / profile.volatility) * 0.25),
-    );
-    return { date, open, high, low, close, volume };
+    return { date, open, high, low, close };
   });
 }

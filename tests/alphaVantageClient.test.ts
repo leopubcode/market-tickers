@@ -22,7 +22,6 @@ describe("AlphaVantageMarketDataProviderClient", () => {
         "03. high": "172.50",
         "04. low": "169.10",
         "05. price": "171.25",
-        "06. volume": "3456789",
         "07. latest trading day": "2026-11-12",
         "08. previous close": "169.75",
         "09. change": "1.5000",
@@ -38,7 +37,6 @@ describe("AlphaVantageMarketDataProviderClient", () => {
       high: 172.5,
       low: 169.1,
       price: 171.25,
-      volume: 3456789,
       latestTradingDay: "2026-11-12",
       previousClose: 169.75,
       change: 1.5,
@@ -52,7 +50,7 @@ describe("AlphaVantageMarketDataProviderClient", () => {
 
   it("parses daily prices newest first and honours limit", async () => {
     const day = (c: string) => ({
-      "1. open": "1", "2. high": "2", "3. low": "0.5", "4. close": c, "5. volume": "100",
+      "1. open": "1", "2. high": "2", "3. low": "0.5", "4. close": c,
     });
     const { client } = clientReturning({
       "Time Series (Daily)": {

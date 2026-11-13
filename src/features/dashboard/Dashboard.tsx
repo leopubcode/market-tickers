@@ -18,8 +18,6 @@ interface DashboardProps {
   ranges: readonly Range[]
   range: Range
   onSelectRange: (key: RangeKey) => void
-  showVolume: boolean
-  onToggleVolume: () => void
   split: boolean
   onToggleSplit: () => void
   /** Cards with negative performance; shown on the right when split. */
@@ -48,8 +46,6 @@ export function Dashboard({
   ranges,
   range,
   onSelectRange,
-  showVolume,
-  onToggleVolume,
   split,
   onToggleSplit,
   negative,
@@ -110,28 +106,16 @@ export function Dashboard({
               </button>
             ))}
           </div>
-          <div className="flex gap-1">
-            <button
+          <button
               type="button"
-              aria-pressed={showVolume}
-              onClick={onToggleVolume}
-              className={`rounded-md border px-2 py-0.5 text-xs ${
-                showVolume ? 'border-accent text-heading' : 'border-line'
-              }`}
-            >
-              Volume
-            </button>
-            <button
-              type="button"
-              aria-pressed={split}
-              onClick={onToggleSplit}
-              className={`rounded-md border px-2 py-0.5 text-xs ${
-                split ? 'border-accent text-heading' : 'border-line'
-              }`}
-            >
-              Split by performance
-            </button>
-          </div>
+            aria-pressed={split}
+            onClick={onToggleSplit}
+            className={`rounded-md border px-2 py-0.5 text-xs ${
+              split ? 'border-accent text-heading' : 'border-line'
+            }`}
+          >
+            Split by performance
+          </button>
           <div className="flex gap-1" role="group" aria-label="Range">
             {ranges.map((r) => (
               <button

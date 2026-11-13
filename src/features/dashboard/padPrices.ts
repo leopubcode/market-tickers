@@ -12,7 +12,7 @@ export function padPrices(prices: DailyPrice[], start: string | undefined): Dail
   for (let date = start; date < prices[0].date; ) {
     const day = d.getUTCDay()
     if (day !== 0 && day !== 6) {
-      padding.push({ date, open: 0, high: 0, low: 0, close: 0, volume: 0 })
+      padding.push({ date, open: 0, high: 0, low: 0, close: 0 })
     }
     d.setUTCDate(d.getUTCDate() + 1)
     date = d.toISOString().slice(0, 10)

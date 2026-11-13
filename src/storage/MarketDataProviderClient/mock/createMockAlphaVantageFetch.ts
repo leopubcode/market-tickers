@@ -54,7 +54,6 @@ export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {
             "2. high": price(d.high),
             "3. low": price(d.low),
             "4. close": price(d.close),
-            "5. volume": String(d.volume),
           },
         ]);
       return { "Time Series (Digital Currency Daily)": Object.fromEntries(entries) };
@@ -85,7 +84,6 @@ export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {
           "03. high": price(last.high),
           "04. low": price(last.low),
           "05. price": price(last.close),
-          "06. volume": String(last.volume),
           "07. latest trading day": last.date,
           "08. previous close": price(prev.close),
           "09. change": price(change),
@@ -112,12 +110,11 @@ export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {
             "2. high": price(d.high),
             "3. low": price(d.low),
             "4. close": price(d.close),
-            "5. volume": String(d.volume),
           },
         ]);
       return {
         "Meta Data": {
-          "1. Information": "Daily Prices (open, high, low, close) and Volumes",
+          "1. Information": "Daily Prices (open, high, low, close)",
           "2. Symbol": symbol,
           "3. Last Refreshed": series[series.length - 1].date,
           "4. Output Size": count === series.length ? "Full size" : "Compact",

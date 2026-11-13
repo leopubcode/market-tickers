@@ -50,7 +50,6 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
       high: toNumber(raw["03. high"]),
       low: toNumber(raw["04. low"]),
       price: toNumber(raw["05. price"]),
-      volume: toNumber(raw["06. volume"]),
       latestTradingDay: raw["07. latest trading day"],
       previousClose: toNumber(raw["08. previous close"]),
       change: toNumber(raw["09. change"]),
@@ -86,7 +85,6 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
       high: latest.high,
       low: latest.low,
       price: latest.close,
-      volume: latest.volume,
       latestTradingDay: latest.date,
       previousClose: previous.close,
       change,
@@ -112,7 +110,6 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
       high: toNumber(v["2. high"]),
       low: toNumber(v["3. low"]),
       close: toNumber(v["4. close"]),
-      volume: toNumber(v["5. volume"]),
     }));
   }
 
@@ -133,7 +130,6 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
       high: toNumber(field(v, 2, "high")),
       low: toNumber(field(v, 3, "low")),
       close: toNumber(field(v, 4, "close")),
-      volume: toNumber(v["5. volume"]),
     }));
   }
 
@@ -153,7 +149,7 @@ export class AlphaVantageMarketDataProviderClient implements MarketDataProvider 
       .filter((d) => d.raw !== ".")
       .map(({ date, raw }) => {
         const close = toNumber(raw);
-        return { date, open: close, high: close, low: close, close, volume: 0 };
+        return { date, open: close, high: close, low: close, close };
       });
   }
 
