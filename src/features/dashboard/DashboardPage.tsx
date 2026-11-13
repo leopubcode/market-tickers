@@ -1,4 +1,5 @@
 import { useQueries } from '@tanstack/react-query'
+import { useRef } from 'react'
 import { Dashboard } from './Dashboard.tsx'
 import {
   GRID_COLUMNS,
@@ -15,6 +16,7 @@ import { TickerCard } from './TickerCard.tsx'
 import { usePersistedState } from './usePersistedState.ts'
 
 export default function DashboardPage() {
+  const cacheDialog = useRef<HTMLDialogElement>(null)
   const [selected, setSelected] = usePersistedState<string[]>(
     'ticker-stocks:selected',
     [WATCHLIST[0].symbol],
@@ -88,8 +90,10 @@ export default function DashboardPage() {
         <CacheReportContainer
           targets={selected.map((symbol) => ({ symbol, kind: kindOf(symbol) }))}
           range={range}
+          dialogRef={cacheDialog}
         />
       }
+      onOpenCacheReport={() => cacheDialog.current?.showModal()}
       split={split}
       onToggleSplit={() => setSplit((v) => !v)}
       negative={selected

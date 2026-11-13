@@ -6,5 +6,6 @@ import { createPriceCacheRepository } from './storage/createPriceCacheRepository
 export const priceCache = new PriceCacheService(
   createPriceCacheRepository(marketDataConfig),
   marketData,
+  marketDataConfig.source,
   () => new Date(),
 )

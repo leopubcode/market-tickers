@@ -18,6 +18,10 @@ export class IndexedDbPriceCacheRepository implements PriceCacheRepository {
     return this.request<CacheEntry | undefined>("readonly", (store) => store.get(symbol));
   }
 
+  async getAll() {
+    return this.request<CacheEntry[]>("readonly", (store) => store.getAll());
+  }
+
   async put(entry: CacheEntry) {
     await this.request("readwrite", (store) => store.put(entry));
   }

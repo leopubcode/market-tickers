@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, type RefObject } from 'react'
 import { planCallId, type PlanTarget } from '../../domain/price-cache/fetchPlan.ts'
 import { priceCache } from '../../priceCache.ts'
+import { downloadText } from '../../common/download.ts'
 import type { BuildOutcome } from '../../services/PriceCacheService.ts'
 import { requestedStart, WATCHLIST, type Range } from '../dashboard/constants.ts'
 import { CacheReport } from './CacheReport.tsx'
@@ -9,9 +10,12 @@ import { CacheReport } from './CacheReport.tsx'
 export function CacheReportContainer({
   targets,
   range,
+  dialogRef,
 }: {
   targets: readonly PlanTarget[]
   range: Range
+  /** The dialog element, so a menu elsewhere can open it. */
+  dialogRef: RefObject<HTMLDialogElement | null>
 }) {
   const queryClient = useQueryClient()
   // Not persisted: a forgotten override would silently shrink every later range.
@@ -41,6 +45,29 @@ export function CacheReportContainer({
   })
 
   // Approvals name an exact symbol and its date ranges, so a new range always needs a new one.
+  const exportCache = useMutation({
+    mutationFn: () => priceCache.export(),
+    onSuccess: ({ filename, text }) => downloadText(filename, text),
+  })
+  const importCache = useMutation({
+    mutationFn: async (file: File) => priceCache.import(await file.text()),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['cache'] })
+      void queryClient.invalidateQueries({ queryKey: ['cache-plan'] })
+    },
+  })
+
+  const transferResult = importCache.isError
+    ? { kind: 'error' as const, message: importCache.error.message }
+    : exportCache.isError
+      ? { kind: 'error' as const, message: exportCache.error.message }
+      : importCache.isSuccess
+        ? {
+            kind: 'success' as const,
+            message: `Imported ${importCache.data.symbols} tickers, ${importCache.data.addedPrices} new price rows.`,
+          }
+        : undefined
+
   const toggleApproved = (id: string) =>
     setApproved((cur) => (cur.includes(id) ? cur.filter((a) => a !== id) : [...cur, id]))
 
@@ -49,6 +76,7 @@ export function CacheReportContainer({
 
   return (
     <CacheReport
+      dialogRef={dialogRef}
       loading={plan.isPending}
       error={plan.error ?? build.error}
       rows={items.map((call) => ({
@@ -65,6 +93,16 @@ export function CacheReportContainer({
       onToggleApproved={toggleApproved}
       onToggleAll={toggleAll}
       building={build.isPending}
+      transferring={exportCache.isPending || importCache.isPending}
+      transferResult={transferResult}
+      onExport={() => {
+        importCache.reset()
+        exportCache.mutate()
+      }}
+      onImport={(file) => {
+        exportCache.reset()
+        importCache.mutate(file)
+      }}
       onBuild={() => {
         // Ask the browser not to evict the cache under storage pressure.
         void navigator.storage?.persist?.()

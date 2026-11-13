@@ -9,6 +9,10 @@ export class InMemoryPriceCacheRepository implements PriceCacheRepository {
     return this.entries.get(symbol);
   }
 
+  async getAll() {
+    return [...this.entries.values()];
+  }
+
   async put(entry: CacheEntry) {
     this.entries.set(entry.symbol, entry);
   }

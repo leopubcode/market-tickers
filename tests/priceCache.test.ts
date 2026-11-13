@@ -194,7 +194,7 @@ describe("PriceCacheService", () => {
       return fetchFn(...args);
     }) as typeof fetch;
     const provider = new AlphaVantageMarketDataProviderClient({ apiKey: "mock" }, counting);
-    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, now);
+    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, "mock", now);
     return { service, calls: () => calls };
   };
 
@@ -232,6 +232,7 @@ describe("PriceCacheService", () => {
     const later = new PriceCacheService(
       (service as unknown as { repository: InMemoryPriceCacheRepository }).repository,
       (service as unknown as { provider: AlphaVantageMarketDataProviderClient }).provider,
+      "mock",
       () => new Date("2026-11-17T12:00:00Z"),
     );
     const items = await later.plan([stock("AAPL")], "2020-01-01");
@@ -259,5 +260,75 @@ describe("PriceCacheService", () => {
       outcomes.map((o) => [o.symbol, o.status]).sort(),
       [["AAPL", "done"], ["NOPE", "failed"]],
     );
+  });
+});
+
+describe("export and import", () => {
+  const now = () => new Date(`${TODAY}T12:00:00Z`);
+  const build = async (source = "mock") => {
+    const provider = new AlphaVantageMarketDataProviderClient(
+      { apiKey: "mock" },
+      createMockAlphaVantageFetch({ latencyMs: 0, now }),
+    );
+    const service = new PriceCacheService(new InMemoryPriceCacheRepository(), provider, source, now);
+    await service.build(await service.plan([stock("AAPL"), stock("MSFT")], "2026-11-09"));
+    return service;
+  };
+  const empty = () =>
+    new PriceCacheService(
+      new InMemoryPriceCacheRepository(),
+      new AlphaVantageMarketDataProviderClient({ apiKey: "mock" }, createMockAlphaVantageFetch()),
+      "mock",
+      now,
+    );
+
+  it("writes a versioned file that imports into an empty cache", async () => {
+    const { filename, text } = await (await build()).export();
+    const file = JSON.parse(text);
+    assert.equal(file.format, "ticker-stocks-price-cache");
+    assert.equal(file.version, 1);
+    assert.equal(file.source, "mock");
+    assert.equal(filename, `ticker-stocks-cache-mock-${TODAY}.json`);
+
+    const target = empty();
+    const result = await target.import(text);
+    assert.equal(result.symbols, 2);
+    assert.deepEqual(await target.get("AAPL"), (await (await build()).get("AAPL")));
+    // Importing the same file again adds nothing.
+    assert.equal((await target.import(text)).addedPrices, 0);
+  });
+
+  it("merges into what is already cached", async () => {
+    const { text } = await (await build()).export();
+    const target = empty();
+    await target.build(await target.plan([stock("AAPL")], "2026-11-02"));
+    const before = (await target.get("AAPL"))!.prices.length;
+    await target.import(text);
+    assert.equal((await target.get("AAPL"))!.prices.length, before);
+    assert.equal((await target.plan([stock("AAPL"), stock("MSFT")], "2026-11-09")).length, 0);
+  });
+
+  it("refuses a file from the other data source", async () => {
+    const { text } = await (await build("live")).export();
+    await assert.rejects(empty().import(text), /holds live prices/);
+  });
+
+  it("rejects files it cannot trust", async () => {
+    const target = empty();
+    const good = JSON.parse((await (await build()).export()).text);
+    const cases: [unknown, RegExp][] = [
+      ["not json", /not valid JSON/],
+      [{ format: "other" }, /not a ticker-stocks/],
+      [{ ...good, version: 2 }, /version 2.*up to version 1/],
+      [{ ...good, version: "1" }, /no valid version/],
+      [{ ...good, entries: [{ ...good.entries[0], prices: [{ date: "x" }] }] }, /malformed price row/],
+    ];
+    for (const [input, message] of cases) {
+      await assert.rejects(
+        target.import(typeof input === "string" ? input : JSON.stringify(input)),
+        message,
+      );
+    }
+    assert.equal(await target.get("AAPL"), undefined);
   });
 });

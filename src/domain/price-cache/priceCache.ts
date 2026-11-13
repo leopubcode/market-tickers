@@ -35,6 +35,36 @@ export function coveredAsOf(entry: CacheEntry, today: string): CoveredRange[] {
 
 export const hasFullHistory = (entry: CacheEntry) => entry.covered[0]?.from === null;
 
+/** Sorts ranges and joins the ones that overlap or touch. */
+export function mergeCovered(ranges: readonly CoveredRange[]): CoveredRange[] {
+  const sorted = [...ranges].sort((a, b) => (a.from ?? "").localeCompare(b.from ?? ""));
+  const merged: CoveredRange[] = [];
+  for (const range of sorted) {
+    const prev = merged[merged.length - 1];
+    if (prev && range.from !== null && range.from <= addDays(prev.to, 1)) {
+      if (range.to > prev.to) prev.to = range.to;
+    } else {
+      merged.push({ ...range });
+    }
+  }
+  return merged;
+}
+
+/** Combines two entries of one symbol; where both hold a day, the later fetch wins. */
+export function mergeEntries(existing: CacheEntry | undefined, incoming: CacheEntry): CacheEntry {
+  if (!existing) return { ...incoming, covered: mergeCovered(incoming.covered) };
+  const [older, newer] =
+    existing.fetchedAt <= incoming.fetchedAt ? [existing, incoming] : [incoming, existing];
+  const byDate = new Map(older.prices.map((p) => [p.date, p]));
+  for (const p of newer.prices) byDate.set(p.date, p);
+  return {
+    symbol: existing.symbol,
+    prices: [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date)),
+    covered: mergeCovered([...existing.covered, ...incoming.covered]),
+    fetchedAt: newer.fetchedAt,
+  };
+}
+
 /**
  * Folds a fetch result into the entry, but only for the approved ranges: the
  * provider returns more days than were asked for, and the rest is dropped so
@@ -63,18 +93,7 @@ export function applyFetch(
     .map((r) => ({ from: r.from, to: r.to < finalThrough ? r.to : finalThrough }))
     .filter((r) => r.from === null || r.from <= r.to);
 
-  const sorted = [...(entry?.covered ?? []), ...added].sort((a, b) =>
-    (a.from ?? "").localeCompare(b.from ?? ""),
-  );
-  const covered: CoveredRange[] = [];
-  for (const range of sorted) {
-    const prev = covered[covered.length - 1];
-    if (prev && range.from !== null && range.from <= addDays(prev.to, 1)) {
-      if (range.to > prev.to) prev.to = range.to;
-    } else {
-      covered.push({ ...range });
-    }
-  }
+  const covered = mergeCovered([...(entry?.covered ?? []), ...added]);
   return {
     symbol: options.symbol,
     prices,

@@ -1,7 +1,8 @@
 import { MarketDataError, type MarketDataProvider } from "../domain/market-data/marketDataProvider.ts";
 import { toDay } from "../domain/price-cache/calendar.ts";
+import { buildExport, ImportError, parseExport } from "../domain/price-cache/exportFile.ts";
 import { groupCalls, planFetches, type PlanCall, type PlanItem, type PlanTarget } from "../domain/price-cache/fetchPlan.ts";
-import { applyFetch, type CacheEntry } from "../domain/price-cache/priceCache.ts";
+import { applyFetch, mergeEntries, type CacheEntry } from "../domain/price-cache/priceCache.ts";
 import type { PriceCacheRepository } from "../domain/price-cache/priceCacheRepository.ts";
 
 export interface BuildOutcome {
@@ -13,11 +14,19 @@ export interface BuildOutcome {
 export class PriceCacheService {
   private readonly repository: PriceCacheRepository;
   private readonly provider: MarketDataProvider;
+  /** MARKET_DATA_SOURCE the cache holds prices for; exports are tagged with it. */
+  private readonly source: string;
   private readonly now: () => Date;
 
-  constructor(repository: PriceCacheRepository, provider: MarketDataProvider, now: () => Date) {
+  constructor(
+    repository: PriceCacheRepository,
+    provider: MarketDataProvider,
+    source: string,
+    now: () => Date,
+  ) {
     this.repository = repository;
     this.provider = provider;
+    this.source = source;
     this.now = now;
   }
 
@@ -27,6 +36,34 @@ export class PriceCacheService {
 
   async get(symbol: string): Promise<CacheEntry | undefined> {
     return this.repository.get(symbol);
+  }
+
+  /** Everything cached, as the text of a versioned JSON file. */
+  async export(): Promise<{ filename: string; text: string }> {
+    const entries = await this.repository.getAll();
+    const file = buildExport(this.source, entries, this.now().toISOString());
+    return {
+      filename: `ticker-stocks-cache-${this.source}-${this.today()}.json`,
+      text: JSON.stringify(file),
+    };
+  }
+
+  /** Merges an export into the cache; days already cached are kept unless the file is newer. */
+  async import(text: string): Promise<{ symbols: number; addedPrices: number }> {
+    const file = parseExport(text);
+    if (file.source !== this.source) {
+      throw new ImportError(
+        `The file holds ${file.source} prices, but the app is set to ${this.source}. They are kept apart on purpose.`,
+      );
+    }
+    let addedPrices = 0;
+    for (const incoming of file.entries) {
+      const existing = await this.repository.get(incoming.symbol);
+      const merged = mergeEntries(existing, incoming);
+      addedPrices += merged.prices.length - (existing?.prices.length ?? 0);
+      await this.repository.put(merged);
+    }
+    return { symbols: file.entries.length, addedPrices };
   }
 
   /**

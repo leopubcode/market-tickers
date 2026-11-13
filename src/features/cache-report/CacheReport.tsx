@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import type { RefObject } from 'react'
 import { ErrorBanner } from '../../common/units/ErrorBanner.tsx'
 import { Skeleton } from '../../common/units/Skeleton.tsx'
 import type { DateRange, PlanCall } from '../../domain/price-cache/fetchPlan.ts'
@@ -16,6 +16,8 @@ export interface ReportRow {
 }
 
 interface CacheReportProps {
+  /** Opened from the banner here and from the sidebar menu. */
+  dialogRef: RefObject<HTMLDialogElement | null>
   loading: boolean
   error?: Error | null
   /** One row per provider call, most recent gap first. */
@@ -30,6 +32,12 @@ interface CacheReportProps {
   onToggleAll: () => void
   building: boolean
   onBuild: () => void
+  onExport: () => void
+  onImport: (file: File) => void
+  /** Whether an export or import is running. */
+  transferring: boolean
+  /** Outcome of the last export or import. */
+  transferResult?: { kind: 'success' | 'error'; message: string }
 }
 
 const rangeLabel = (range: DateRange) =>
@@ -38,6 +46,7 @@ const rangeLabel = (range: DateRange) =>
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
 export function CacheReport({
+  dialogRef: dialog,
   loading,
   error,
   rows,
@@ -49,8 +58,11 @@ export function CacheReport({
   onToggleAll,
   building,
   onBuild,
+  onExport,
+  onImport,
+  transferring,
+  transferResult,
 }: CacheReportProps) {
-  const dialog = useRef<HTMLDialogElement>(null)
   const approvedCount = rows.filter((r) => approved.includes(r.id)).length
 
   return (
@@ -121,6 +133,44 @@ export function CacheReport({
           </label>
 
           {error && <ErrorBanner message={error.message} />}
+
+          <div className="flex flex-wrap items-center gap-2 border-t border-line pt-3 text-sm">
+            <span>Backup</span>
+            <button
+              type="button"
+              disabled={transferring}
+              onClick={onExport}
+              className="rounded-md border border-line px-2 py-0.5 text-xs disabled:opacity-50"
+            >
+              Export JSON
+            </button>
+            <label
+              className={`rounded-md border border-line px-2 py-0.5 text-xs ${
+                transferring ? 'opacity-50' : 'cursor-pointer'
+              }`}
+            >
+              Import JSON
+              <input
+                type="file"
+                accept="application/json,.json"
+                disabled={transferring}
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) onImport(file)
+                }}
+              />
+            </label>
+            {transferResult && (
+              <span
+                role={transferResult.kind === 'error' ? 'alert' : 'status'}
+                className={`text-xs ${transferResult.kind === 'error' ? 'text-down' : 'text-up'}`}
+              >
+                {transferResult.message}
+              </span>
+            )}
+          </div>
 
           {loading ? (
             <Skeleton className="h-24" />
