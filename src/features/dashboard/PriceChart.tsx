@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import {
   Area,
   AreaChart,
@@ -9,15 +10,17 @@ import {
 } from 'recharts'
 import type { DailyPrice } from '../../domain/market-data/marketDataProvider.ts'
 
-export function PriceChart({ prices }: { prices: DailyPrice[] }) {
+export function PriceChart({ prices, up }: { prices: DailyPrice[]; up: boolean }) {
+  const color = up ? 'var(--color-up)' : 'var(--color-down)'
+  const fillId = `priceFill-${useId().replace(/:/g, '')}`
   return (
-    <div className="h-72" role="img" aria-label="Closing price chart">
+    <div className="h-64" role="img" aria-label="Closing price chart">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={prices}>
           <defs>
-            <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+            <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="var(--color-line)" vertical={false} />
@@ -43,9 +46,9 @@ export function PriceChart({ prices }: { prices: DailyPrice[] }) {
           <Area
             type="monotone"
             dataKey="close"
-            stroke="var(--color-accent)"
+            stroke={color}
             strokeWidth={2}
-            fill="url(#priceFill)"
+            fill={`url(#${fillId})`}
           />
         </AreaChart>
       </ResponsiveContainer>

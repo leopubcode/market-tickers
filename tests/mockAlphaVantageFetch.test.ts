@@ -77,3 +77,51 @@ describe("market data config", () => {
     assert.equal((await provider.getQuote("KO")).symbol, "KO");
   });
 });
+
+describe("crypto and commodities", () => {
+  it("serves bitcoin from the digital currency endpoint", async () => {
+    const prices = await client.getDailyPrices("BTC", { kind: "crypto", limit: 5 });
+    assert.equal(prices.length, 5);
+    assert.ok(prices[0].volume > 0);
+    const q = await client.getQuote("BTC", "crypto");
+    assert.equal(q.symbol, "BTC");
+    assert.ok(Math.abs(q.price - 95_000) < 1e-6);
+    assert.ok(Math.abs(q.change - (q.price - q.previousClose)) < 1e-3);
+  });
+
+  it("serves gold and oil as close-only series", async () => {
+    for (const [symbol, last] of [["XAU", 4_000], ["WTI", 62]] as const) {
+      const prices = await client.getDailyPrices(symbol, { kind: "commodity", limit: 3 });
+      assert.equal(prices[0].date, "2026-11-13");
+      assert.ok(Math.abs(prices[0].close - last) < 1e-6);
+      assert.equal(prices[0].open, prices[0].close);
+      assert.equal(prices[0].volume, 0);
+      assert.equal((await client.getQuote(symbol, "commodity")).symbol, symbol);
+    }
+  });
+
+  it("skips oil days without a price", async () => {
+    const fetchFn = (async () =>
+      Response.json({
+        data: [
+          { date: "2026-11-13", value: "62.10" },
+          { date: "2026-11-12", value: "." },
+          { date: "2026-11-11", value: "61.00" },
+        ],
+      })) as unknown as typeof fetch;
+    const oil = new AlphaVantageMarketDataProviderClient({ apiKey: "k" }, fetchFn);
+    const prices = await oil.getDailyPrices("WTI", { kind: "commodity" });
+    assert.deepEqual(prices.map((p) => p.date), ["2026-11-13", "2026-11-11"]);
+  });
+
+  it("rejects unknown commodities and mismatched kinds", async () => {
+    await assert.rejects(
+      client.getDailyPrices("COPPER", { kind: "commodity" }),
+      (e: MarketDataError) => e.code === "SYMBOL_NOT_FOUND",
+    );
+    await assert.rejects(
+      client.getDailyPrices("AAPL", { kind: "crypto" }),
+      (e: MarketDataError) => e.code === "SYMBOL_NOT_FOUND",
+    );
+  });
+});

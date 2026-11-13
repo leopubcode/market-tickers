@@ -1,3 +1,6 @@
+/** Decides which API endpoints serve a symbol: equities, digital currencies or commodities. */
+export type AssetKind = "stock" | "crypto" | "commodity";
+
 export interface Quote {
   symbol: string;
   price: number;
@@ -37,7 +40,13 @@ export class MarketDataError extends Error {
 }
 
 export interface MarketDataProvider {
-  getQuote(symbol: string): Promise<Quote>;
-  /** Daily prices, newest first. */
-  getDailyPrices(symbol: string, options?: { limit?: number }): Promise<DailyPrice[]>;
+  getQuote(symbol: string, kind?: AssetKind): Promise<Quote>;
+  /**
+   * Daily prices, newest first. `compact` is ~100 days, `full` is the whole history.
+   * Close-only series (e.g. oil) repeat the close in open/high/low and report volume 0.
+   */
+  getDailyPrices(
+    symbol: string,
+    options?: { kind?: AssetKind; limit?: number; outputSize?: "compact" | "full" },
+  ): Promise<DailyPrice[]>;
 }

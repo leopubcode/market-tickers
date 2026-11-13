@@ -1,5 +1,9 @@
+import type { AssetKind } from "../../../domain/market-data/marketDataProvider.ts";
+
 export interface TickerProfile {
   symbol: string;
+  /** Defaults to "stock". */
+  kind?: AssetKind;
   /** Typical daily move (standard deviation of daily returns), e.g. 0.015 = 1.5%. */
   volatility: number;
   /** Typical daily share volume. */
@@ -32,9 +36,15 @@ export const TICKER_PROFILES: TickerProfile[] = [
   { symbol: "TSM", volatility: 0.021, baseVolume: 14_000_000, waypoints: [115, 135, 80, 100, 175, 290] },
   { symbol: "MU", volatility: 0.028, baseVolume: 20_000_000, waypoints: [85, 90, 55, 70, 120, 200] },
   { symbol: "ORCL", volatility: 0.02, baseVolume: 9_000_000, waypoints: [105, 100, 75, 125, 190, 240] },
-  // Listed 2025-03-28 (~410 trading days ago).
-  { symbol: "CRWV", volatility: 0.05, baseVolume: 20_000_000, tradingDays: 410, waypoints: [40, 165, 75, 140, 90] },
+  { symbol: "CRWV", volatility: 0.05, baseVolume: 20_000_000, waypoints: [40, 165, 75, 140, 90] },
   // Listed 2026-06-12 (~110 trading days ago).
   { symbol: "SPCX", volatility: 0.035, baseVolume: 40_000_000, tradingDays: 110, waypoints: [150, 210, 165, 185] },
+  { symbol: "MSTR", volatility: 0.045, baseVolume: 15_000_000, waypoints: [14, 30, 16, 40, 190, 330] },
+  { symbol: "VOO", volatility: 0.009, baseVolume: 6_000_000, waypoints: [405, 432, 350, 385, 478, 545] },
+  { symbol: "QQQ", volatility: 0.013, baseVolume: 40_000_000, waypoints: [300, 400, 265, 330, 440, 600] },
+  { symbol: "BTC", kind: "crypto", volatility: 0.035, baseVolume: 30_000, waypoints: [16_500, 42_000, 16_000, 44_000, 70_000, 95_000] },
+  { symbol: "XAU", kind: "commodity", volatility: 0.009, baseVolume: 0, waypoints: [1_800, 1_950, 1_750, 2_050, 2_650, 4_000] },
+  { symbol: "XAG", kind: "commodity", volatility: 0.018, baseVolume: 0, waypoints: [22, 24, 19, 23, 31, 50] },
+  { symbol: "WTI", kind: "commodity", volatility: 0.02, baseVolume: 0, waypoints: [70, 120, 75, 80, 70, 62] },
   { symbol: "SPY", volatility: 0.009, baseVolume: 70_000_000, waypoints: [440, 470, 380, 420, 520, 595] },
 ];

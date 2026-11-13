@@ -9,8 +9,8 @@ export interface MockDay {
   volume: number;
 }
 
-// ~5 years of trading days, enough for outputsize=full.
-export const SERIES_LENGTH = 1300;
+// ~10.5 years of trading days, enough for outputsize=full.
+export const SERIES_LENGTH = 2750;
 
 function hashString(s: string): number {
   let h = 2166136261;

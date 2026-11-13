@@ -9,10 +9,14 @@ export interface MockAlphaVantageOptions {
 
 const COMPACT_LENGTH = 100;
 const price = (n: number) => n.toFixed(4);
+const invalidCall = (fn: string) => ({
+  "Error Message": `Invalid API call. Please retry or visit the documentation (https://www.alphavantage.co/documentation/) for ${fn}.`,
+});
 
 /**
  * A stand-in for `fetch` that answers like https://www.alphavantage.co/query
- * (GLOBAL_QUOTE and TIME_SERIES_DAILY) from generated data. It never touches
+ * (GLOBAL_QUOTE, TIME_SERIES_DAILY, DIGITAL_CURRENCY_DAILY, GOLD_SILVER_HISTORY,
+ * WTI and BRENT) from generated data. It never touches
  * the network, so it has no rate limit.
  */
 export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {}): typeof fetch {
@@ -36,6 +40,38 @@ export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {
     const fn = params.get("function");
     const symbol = (params.get("symbol") ?? "").toUpperCase();
     const series = seriesFor(symbol);
+    const kind = profiles.get(symbol)?.kind ?? "stock";
+
+    if (fn === "DIGITAL_CURRENCY_DAILY") {
+      if (!series || kind !== "crypto") return invalidCall(fn);
+      const entries = series
+        .slice()
+        .reverse()
+        .map((d) => [
+          d.date,
+          {
+            "1. open": price(d.open),
+            "2. high": price(d.high),
+            "3. low": price(d.low),
+            "4. close": price(d.close),
+            "5. volume": String(d.volume),
+          },
+        ]);
+      return { "Time Series (Digital Currency Daily)": Object.fromEntries(entries) };
+    }
+
+    if (fn === "GOLD_SILVER_HISTORY" || fn === "WTI" || fn === "BRENT") {
+      const oil = fn !== "GOLD_SILVER_HISTORY";
+      const profile = oil ? profiles.get(fn === "BRENT" ? "WTI" : fn) : profiles.get(symbol);
+      const commoditySeries = profile ? seriesFor(profile.symbol) : undefined;
+      if (!commoditySeries || profile?.kind !== "commodity") return invalidCall(fn);
+      // Gold and silver report `price`, oil reports `value`, as the real API does.
+      const data = commoditySeries
+        .slice()
+        .reverse()
+        .map((d) => ({ date: d.date, [oil ? "value" : "price"]: price(d.close) }));
+      return { interval: "daily", data };
+    }
 
     if (fn === "GLOBAL_QUOTE") {
       if (!series) return { "Global Quote": {} };

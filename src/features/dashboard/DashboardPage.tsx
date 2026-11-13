@@ -1,39 +1,107 @@
-import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import { marketData } from '../../marketData.ts'
+import { useQueries } from '@tanstack/react-query'
 import { Dashboard } from './Dashboard.tsx'
-import { RANGES, WATCHLIST, type RangeKey } from './constants.ts'
+import {
+  GRID_COLUMNS,
+  RANGES,
+  WATCHLIST,
+  type GridColumns,
+  type RangeKey,
+} from './constants.ts'
+import { rangeChange } from './performance.ts'
+import { dailyQuery, quoteQuery } from './queries.ts'
+import { TickerCard } from './TickerCard.tsx'
+import { usePersistedState } from './usePersistedState.ts'
 
 export default function DashboardPage() {
-  const [symbol, setSymbol] = useState<string>(WATCHLIST[0].symbol)
-  const [rangeKey, setRangeKey] = useState<RangeKey>('3M')
+  const [selected, setSelected] = usePersistedState<string[]>(
+    'ticker-stocks:selected',
+    [WATCHLIST[0].symbol],
+    (v): v is string[] =>
+      Array.isArray(v) &&
+      v.every((s) => WATCHLIST.some((w) => w.symbol === s)),
+  )
+  const [columns, setColumns] = usePersistedState<GridColumns>(
+    'ticker-stocks:columns',
+    2,
+    (v): v is GridColumns => GRID_COLUMNS.some((c) => c === v),
+  )
+  const [showVolume, setShowVolume] = usePersistedState(
+    'ticker-stocks:showVolume',
+    true,
+    (v): v is boolean => typeof v === 'boolean',
+  )
+  const [split, setSplit] = usePersistedState(
+    'ticker-stocks:split',
+    false,
+    (v): v is boolean => typeof v === 'boolean',
+  )
+  const [rangeKey, setRangeKey] = usePersistedState<RangeKey>(
+    'ticker-stocks:range',
+    '3M',
+    (v): v is RangeKey => RANGES.some((r) => r.key === v),
+  )
 
-  const quote = useQuery({
-    queryKey: ['quote', symbol],
-    queryFn: () => marketData.getQuote(symbol),
-  })
-  const daily = useQuery({
-    queryKey: ['daily', symbol],
-    queryFn: () => marketData.getDailyPrices(symbol),
+  // Shares the card queries' cache; used to give every chart the same All scale.
+  const allStart = useQueries({
+    queries: selected.map(dailyQuery),
+    combine: (results) =>
+      results
+        .map((r) => r.data?.at(-1)?.date)
+        .filter((d): d is string => d !== undefined)
+        .sort()[0],
   })
 
   const range = RANGES.find((r) => r.key === rangeKey)!
-  // The provider returns newest first; charts read oldest to newest.
-  const prices = daily.data?.slice(0, range.days).reverse()
-  const error = quote.error ?? daily.error
+
+  // Same cache as the cards; decides which side each chart lands on.
+  const prices = useQueries({
+    queries: selected.map(quoteQuery),
+    combine: (results) => results.map((r) => r.data?.price),
+  })
+  const histories = useQueries({
+    queries: selected.map(dailyQuery),
+    combine: (results) => results.map((r) => r.data),
+  })
+  const losers = new Set(
+    selected.filter(
+      (_, i) => (rangeChange(prices[i], histories[i], range, allStart)?.change ?? 0) < 0,
+    ),
+  )
+
+  const toggleSymbol = (symbol: string) =>
+    setSelected((cur) =>
+      cur.includes(symbol) ? cur.filter((s) => s !== symbol) : [...cur, symbol],
+    )
+
+  const toggleAll = () =>
+    setSelected((cur) =>
+      cur.length === WATCHLIST.length ? [] : WATCHLIST.map((s) => s.symbol),
+    )
+
+  const renderCard = (symbol: string) => (
+    <TickerCard key={symbol} symbol={symbol} range={range} allStart={allStart} showVolume={showVolume} />
+  )
 
   return (
     <Dashboard
       symbols={WATCHLIST}
-      symbol={symbol}
-      onSelectSymbol={setSymbol}
+      selected={selected}
+      onToggleSymbol={toggleSymbol}
+      onToggleAll={toggleAll}
+      columns={columns}
+      onSelectColumns={setColumns}
       ranges={RANGES}
       range={range}
       onSelectRange={setRangeKey}
-      quote={quote.data}
-      prices={prices}
-      loading={quote.isPending || daily.isPending}
-      error={error ? error.message : undefined}
-    />
+      showVolume={showVolume}
+      onToggleVolume={() => setShowVolume((v) => !v)}
+      split={split}
+      onToggleSplit={() => setSplit((v) => !v)}
+      negative={selected
+        .filter((s) => losers.has(s))
+        .map(renderCard)}
+    >
+      {selected.filter((s) => !split || !losers.has(s)).map(renderCard)}
+    </Dashboard>
   )
 }
