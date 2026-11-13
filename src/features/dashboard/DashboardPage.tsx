@@ -5,7 +5,7 @@ import { Dashboard } from './Dashboard.tsx'
 import { RANGES, WATCHLIST, type RangeKey } from './constants.ts'
 
 export default function DashboardPage() {
-  const [symbol, setSymbol] = useState<string>(WATCHLIST[0])
+  const [symbol, setSymbol] = useState<string>(WATCHLIST[0].symbol)
   const [rangeKey, setRangeKey] = useState<RangeKey>('3M')
 
   const quote = useQuery({

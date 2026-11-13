@@ -26,7 +26,7 @@ export function createMockAlphaVantageFetch(options: MockAlphaVantageOptions = {
     if (!profile) return undefined;
     let series = cache.get(symbol);
     if (!series) {
-      series = generateSeries(profile, dates);
+      series = generateSeries(profile, profile.tradingDays ? dates.slice(-profile.tradingDays) : dates);
       cache.set(symbol, series);
     }
     return series;

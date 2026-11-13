@@ -10,6 +10,8 @@ export interface TickerProfile {
    * between waypoints so charts show recognisable rallies and drawdowns.
    */
   waypoints: number[];
+  /** Recently listed tickers only have this many trading days of history. */
+  tradingDays?: number;
 }
 
 export const TICKER_PROFILES: TickerProfile[] = [
@@ -26,5 +28,13 @@ export const TICKER_PROFILES: TickerProfile[] = [
   { symbol: "JPM", volatility: 0.014, baseVolume: 9_500_000, waypoints: [155, 135, 125, 145, 190, 245] },
   { symbol: "KO", volatility: 0.009, baseVolume: 14_000_000, waypoints: [55, 63, 58, 60, 62, 70] },
   { symbol: "DIS", volatility: 0.02, baseVolume: 10_000_000, waypoints: [180, 145, 90, 95, 112, 100] },
+  { symbol: "AVGO", volatility: 0.026, baseVolume: 25_000_000, waypoints: [62, 58, 45, 120, 190, 340] },
+  { symbol: "TSM", volatility: 0.021, baseVolume: 14_000_000, waypoints: [115, 135, 80, 100, 175, 290] },
+  { symbol: "MU", volatility: 0.028, baseVolume: 20_000_000, waypoints: [85, 90, 55, 70, 120, 200] },
+  { symbol: "ORCL", volatility: 0.02, baseVolume: 9_000_000, waypoints: [105, 100, 75, 125, 190, 240] },
+  // Listed 2025-03-28 (~410 trading days ago).
+  { symbol: "CRWV", volatility: 0.05, baseVolume: 20_000_000, tradingDays: 410, waypoints: [40, 165, 75, 140, 90] },
+  // Listed 2026-06-12 (~110 trading days ago).
+  { symbol: "SPCX", volatility: 0.035, baseVolume: 40_000_000, tradingDays: 110, waypoints: [150, 210, 165, 185] },
   { symbol: "SPY", volatility: 0.009, baseVolume: 70_000_000, waypoints: [440, 470, 380, 420, 520, 595] },
 ];

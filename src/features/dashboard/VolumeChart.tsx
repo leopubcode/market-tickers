@@ -9,12 +9,12 @@ export function VolumeChart({ prices }: { prices: DailyPrice[] }) {
           <XAxis dataKey="date" hide />
           <Tooltip
             contentStyle={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
+              background: 'var(--color-surface)',
+              border: '1px solid var(--color-line)',
             }}
             formatter={(v) => [Number(v).toLocaleString(), 'Volume']}
           />
-          <Bar dataKey="volume" fill="var(--border)" />
+          <Bar dataKey="volume" fill="var(--color-line)" />
         </BarChart>
       </ResponsiveContainer>
     </div>

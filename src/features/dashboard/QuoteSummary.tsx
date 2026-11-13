@@ -5,13 +5,13 @@ export function QuoteSummary({ quote }: { quote: Quote }) {
   const sign = up ? '+' : ''
   return (
     <section className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <h2 className="m-0 text-xl font-medium text-[var(--text-h)]">
+      <h2 className="text-xl font-medium text-heading">
         {quote.symbol}
       </h2>
-      <span className="text-3xl font-medium text-[var(--text-h)]">
+      <span className="text-3xl font-medium text-heading">
         ${quote.price.toFixed(2)}
       </span>
-      <span style={{ color: up ? 'var(--up)' : 'var(--down)' }}>
+      <span className={up ? 'text-up' : 'text-down'}>
         {sign}
         {quote.change.toFixed(2)} ({sign}
         {quote.changePercent.toFixed(2)}%)

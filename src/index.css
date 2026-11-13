@@ -1,35 +1,14 @@
 @import "tailwindcss";
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --surface: #f8f8fa;
-  --border: #e5e4e7;
-  --accent: #aa3bff;
-  --up: #15803d;
-  --down: #b91c1c;
-
-  font: 16px/150% system-ui, 'Segoe UI', Roboto, sans-serif;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --surface: #1f2028;
-    --border: #2e303a;
-    --accent: #c084fc;
-    --up: #4ade80;
-    --down: #f87171;
-  }
-}
-
-body {
-  margin: 0;
+/* Palette as Tailwind theme tokens (light-dark() follows the OS colour scheme).
+   `static` keeps the variables available to Recharts props, which can't use classes. */
+@theme static {
+  --color-page: light-dark(#fff, #16171d);
+  --color-surface: light-dark(#f8f8fa, #1f2028);
+  --color-line: light-dark(#e5e4e7, #2e303a);
+  --color-body: light-dark(#6b6375, #9ca3af);
+  --color-heading: light-dark(#08060d, #f3f4f6);
+  --color-accent: light-dark(#aa3bff, #c084fc);
+  --color-up: light-dark(#15803d, #4ade80);
+  --color-down: light-dark(#b91c1c, #f87171);
 }
