@@ -27,7 +27,7 @@ export function AppServicesProvider({ children }: { children: ReactNode }) {
           source: config.source,
           fullHistory: config.fullHistory,
           // The mock has no throttle; Alpha Vantage allows about one request per second.
-          requestSpacingMs: config.source === 'live' ? 1100 : 0,
+          requestSpacingMs: config.source === 'live' ? 2000 : 0,
         },
         systemClock,
       ),
