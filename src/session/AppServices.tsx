@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useMemo, type ReactNode } from 'react'
+import type { MarketDataSource } from '../config.ts'
 import { toMarketDataConfig } from '../domain/settings/settings.ts'
 import { PriceCacheService } from '../services/PriceCacheService.ts'
 import { createMarketDataProvider } from '../storage/createMarketDataProvider.ts'
@@ -8,6 +9,13 @@ import { PriceCacheContext } from './PriceCacheContext.ts'
 import { useSession } from './SessionContext.tsx'
 
 const systemClock = () => new Date()
+
+/** Least time between provider calls, from each plan's free-tier rate limit. */
+const REQUEST_SPACING_MS: Record<MarketDataSource, number> = {
+  mock: 0,
+  alphavantage: 2000, // about one request per second
+  twelvedata: 7500, // 8 requests per minute
+}
 
 /**
  * Builds the market data services from the session's settings. They hold the API key,
@@ -26,8 +34,7 @@ export function AppServicesProvider({ children }: { children: ReactNode }) {
         {
           source: config.source,
           fullHistory: config.fullHistory,
-          // The mock has no throttle; Alpha Vantage allows about one request per second.
-          requestSpacingMs: config.source === 'live' ? 2000 : 0,
+          requestSpacingMs: REQUEST_SPACING_MS[config.source],
         },
         systemClock,
       ),

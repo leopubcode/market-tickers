@@ -139,7 +139,7 @@ export function CacheReport({
           {!fullHistory && (
             <p className="text-xs">
               Free plan: stock history can only be fetched for the last ~100 trading days, so
-              earlier days are not listed. Enable the premium plan in Settings to unlock full history.
+              earlier days are not listed. Enable the Alpha Vantage premium plan in Settings, or switch to Twelve Data, to unlock full history.
             </p>
           )}
 

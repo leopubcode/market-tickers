@@ -363,8 +363,8 @@ describe("export and import", () => {
   });
 
   it("refuses a file from the other data source", async () => {
-    const { text } = await (await build("live")).export();
-    await assert.rejects(empty().import(text), /holds live prices/);
+    const { text } = await (await build("twelvedata")).export();
+    await assert.rejects(empty().import(text), /holds twelvedata prices/);
   });
 
   it("rejects files it cannot trust", async () => {
@@ -388,8 +388,11 @@ describe("export and import", () => {
 });
 
 describe("priceCacheDbName", () => {
-  it("keeps mock and live prices in different databases", () => {
-    assert.notEqual(priceCacheDbName("mock"), priceCacheDbName("live"));
+  it("keeps each source's prices in a different database", () => {
+    const names = ["mock", "alphavantage", "twelvedata"].map(priceCacheDbName);
+    assert.equal(new Set(names).size, 3);
+    // The name Alpha Vantage cached under before there were other live sources.
+    assert.equal(priceCacheDbName("alphavantage"), "ticker-stocks:price-cache:live");
   });
 });
 

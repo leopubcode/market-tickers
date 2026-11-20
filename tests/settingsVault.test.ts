@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { toMarketDataConfig, type Settings } from "../src/domain/settings/settings.ts";
+import { DEFAULT_SETTINGS, parseSettings, toMarketDataConfig, type Settings } from "../src/domain/settings/settings.ts";
 import { VaultError } from "../src/domain/vault/vaultRecord.ts";
 import { SettingsVaultService, VAULT_ITERATIONS } from "../src/services/SettingsVaultService.ts";
 import { InMemorySettingsVaultRepository } from "../src/storage/SettingsVaultRepository/InMemorySettingsVaultRepository.ts";
 
-const SETTINGS: Settings = { source: "live", apiKey: "SECRETKEY123", premium: true };
+const SETTINGS: Settings = {
+  source: "alphavantage",
+  apiKeys: { alphavantage: "SECRETKEY123", twelvedata: "TDKEY456" },
+  premium: true,
+};
 const code = (c: string) => (e: unknown) => e instanceof VaultError && e.code === c;
 
 // Few rounds keep the suite fast; the production count is checked separately.
@@ -72,7 +76,7 @@ describe("SettingsVaultService", () => {
   it("saves new settings that the same password unlocks", async () => {
     const { service } = setup();
     const vault = await service.create("hunter22", SETTINGS);
-    const next = { source: "mock" as const, apiKey: "", premium: false };
+    const next = { ...DEFAULT_SETTINGS, source: "twelvedata" as const, apiKeys: { alphavantage: "", twelvedata: "K" } };
     await service.save(vault, next);
     assert.deepEqual((await service.unlock("hunter22")).settings, next);
   });
@@ -98,7 +102,7 @@ describe("SettingsVaultService", () => {
 
   it("refuses live settings without an API key, and erases", async () => {
     const { service } = setup();
-    await assert.rejects(service.create("hunter22", { ...SETTINGS, apiKey: " " }), /API key/);
+    await assert.rejects(service.create("hunter22", { ...SETTINGS, apiKeys: { ...SETTINGS.apiKeys, alphavantage: " " } }), /API key/);
     await service.create("hunter22", SETTINGS);
     service.erase();
     assert.equal(service.exists(), false);
@@ -106,15 +110,34 @@ describe("SettingsVaultService", () => {
 });
 
 describe("toMarketDataConfig", () => {
-  it("maps the premium flag to full history and hides the key from mock", () => {
+  it("passes only the selected provider's key and hides keys from mock", () => {
     assert.deepEqual(toMarketDataConfig(SETTINGS), {
-      source: "live",
-      alphaVantageApiKey: "SECRETKEY123",
+      source: "alphavantage",
+      apiKey: "SECRETKEY123",
       fullHistory: true,
     });
-    assert.equal(
-      toMarketDataConfig({ source: "mock", apiKey: "K", premium: false }).alphaVantageApiKey,
-      undefined,
-    );
+    assert.equal(toMarketDataConfig({ ...SETTINGS, source: "twelvedata" }).apiKey, "TDKEY456");
+    assert.equal(toMarketDataConfig({ ...SETTINGS, source: "mock" }).apiKey, undefined);
+  });
+
+  it("gates full history behind premium for Alpha Vantage only", () => {
+    const free = { ...SETTINGS, premium: false };
+    assert.equal(toMarketDataConfig(free).fullHistory, false);
+    assert.equal(toMarketDataConfig({ ...free, source: "twelvedata" }).fullHistory, true);
+  });
+});
+
+describe("parseSettings", () => {
+  it("upgrades a vault saved with the single Alpha Vantage key", () => {
+    assert.deepEqual(parseSettings({ source: "live", apiKey: "OLD", premium: true }), {
+      source: "alphavantage",
+      apiKeys: { alphavantage: "OLD", twelvedata: "" },
+      premium: true,
+    });
+    assert.equal(parseSettings({ source: "mock", apiKey: "", premium: false }).source, "mock");
+  });
+
+  it("rejects an unknown source", () => {
+    assert.throws(() => parseSettings({ ...SETTINGS, source: "yahoo" }), /malformed/);
   });
 });

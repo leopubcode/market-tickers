@@ -14,7 +14,7 @@ export interface BuildOutcome {
 export class PriceCacheService {
   private readonly repository: PriceCacheRepository;
   private readonly provider: MarketDataProvider;
-  /** Source (mock or live) the cache holds prices for; exports are tagged with it. */
+  /** Source (mock or a provider) the cache holds prices for; exports are tagged with it. */
   private readonly source: string;
   /** Whether stock history beyond the short call can be fetched. */
   readonly fullHistory: boolean;
@@ -64,9 +64,11 @@ export class PriceCacheService {
   /** Merges an export into the cache; days already cached are kept unless the file is newer. */
   async import(text: string): Promise<{ symbols: number; addedPrices: number }> {
     const file = parseExport(text);
-    if (file.source !== this.source) {
+    // Files exported before Twelve Data existed tag Alpha Vantage prices as "live".
+    const fileSource = file.source === "live" ? "alphavantage" : file.source;
+    if (fileSource !== this.source) {
       throw new ImportError(
-        `The file holds ${file.source} prices, but the app is set to ${this.source}. They are kept apart on purpose.`,
+        `The file holds ${fileSource} prices, but the app is set to ${this.source}. They are kept apart on purpose.`,
       );
     }
     let addedPrices = 0;

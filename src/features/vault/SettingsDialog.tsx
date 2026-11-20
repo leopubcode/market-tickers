@@ -22,7 +22,7 @@ export function SettingsDialog({ dialogRef, settings, pending, error, onSave }: 
     >
       {/* Remounted on save so the inputs show the stored values. */}
       <form
-        key={`${settings.source}|${settings.apiKey}|${settings.premium}`}
+        key={`${settings.source}|${settings.apiKeys.alphavantage}|${settings.apiKeys.twelvedata}|${settings.premium}`}
         className="flex flex-col gap-3 p-4 sm:p-6"
         onSubmit={(e) => {
           e.preventDefault()
@@ -43,7 +43,7 @@ export function SettingsDialog({ dialogRef, settings, pending, error, onSave }: 
         </div>
         <p className="text-xs">
           Stored encrypted in this browser. Each source keeps its own price cache, so switching
-          does not mix mock and live prices.
+          never mixes prices from different providers.
         </p>
 
         {error && <ErrorBanner message={error} />}
