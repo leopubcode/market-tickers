@@ -1,9 +1,10 @@
 import type { AssetKind, DailyPrice } from '../../domain/market-data/marketDataProvider.ts'
 import { addDays, latestWeekday, weekdaysBack } from '../../domain/price-cache/calendar.ts'
 
-type WatchlistEntry = { symbol: string; name: string; kind?: AssetKind }
+export type WatchlistItem = { symbol: string; name: string; kind?: AssetKind }
 
-export const WATCHLIST: readonly WatchlistEntry[] = [
+/** Seeds the stored watchlist on first run; after that the user's own list is used. */
+export const DEFAULT_WATCHLIST: readonly WatchlistItem[] = [
   { symbol: 'AMZN', name: 'Amazon.com, Inc.' },
   { symbol: 'AAPL', name: 'Apple Inc.' },
   { symbol: 'NVDA', name: 'NVIDIA Corporation' },
@@ -25,8 +26,6 @@ export const WATCHLIST: readonly WatchlistEntry[] = [
   { symbol: 'XAG', name: 'Silver spot (USD per troy oz)', kind: 'commodity' },
   { symbol: 'WTI', name: 'Crude oil, WTI (USD per barrel)', kind: 'commodity' },
 ]
-
-export type WatchlistItem = WatchlistEntry
 
 export const RANGES = [
   { key: '1D', label: '1D', tradingDays: 1 },

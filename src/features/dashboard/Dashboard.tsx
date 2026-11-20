@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react'
+import type { AssetKind } from '../../domain/market-data/marketDataProvider.ts'
 import { Tooltip } from '../../common/units/Tooltip.tsx'
+import { ASSET_KINDS } from './watchlist.ts'
 import {
   GRID_COLUMNS,
   type GridColumns,
@@ -13,6 +15,8 @@ interface DashboardProps {
   selected: readonly string[]
   onToggleSymbol: (symbol: string) => void
   onToggleAll: () => void
+  onAddSymbol: (input: { symbol: string; name: string; kind: AssetKind }) => void
+  onRemoveSymbol: (symbol: string) => void
   columns: GridColumns
   onSelectColumns: (columns: GridColumns) => void
   ranges: readonly Range[]
@@ -69,6 +73,8 @@ export function Dashboard({
   selected,
   onToggleSymbol,
   onToggleAll,
+  onAddSymbol,
+  onRemoveSymbol,
   columns,
   onSelectColumns,
   ranges,
@@ -155,25 +161,77 @@ export function Dashboard({
               All
             </button>
             {symbols.map((s) => (
-              <Tooltip key={s.symbol} content={s.name}>
-                {(trigger) => (
-                  <button
-                    {...trigger}
-                    type="button"
-                    aria-pressed={selected.includes(s.symbol)}
-                    onClick={() => onToggleSymbol(s.symbol)}
-                    className={`rounded-md border px-3 py-1 text-sm ${
-                      selected.includes(s.symbol)
-                        ? 'border-accent text-heading'
-                        : 'border-line'
-                    }`}
-                  >
-                    {s.symbol}
-                  </button>
-                )}
-              </Tooltip>
+              <span key={s.symbol} className="inline-flex">
+                <Tooltip content={s.name}>
+                  {(trigger) => (
+                    <button
+                      {...trigger}
+                      type="button"
+                      aria-pressed={selected.includes(s.symbol)}
+                      onClick={() => onToggleSymbol(s.symbol)}
+                      className={`rounded-l-md border px-3 py-1 text-sm ${
+                        selected.includes(s.symbol)
+                          ? 'border-accent text-heading'
+                          : 'border-line'
+                      }`}
+                    >
+                      {s.symbol}
+                    </button>
+                  )}
+                </Tooltip>
+                <button
+                  type="button"
+                  aria-label={`Remove ${s.symbol}`}
+                  onClick={() => onRemoveSymbol(s.symbol)}
+                  className="rounded-r-md border border-l-0 border-line px-1.5 py-1 text-sm hover:border-accent"
+                >
+                  ×
+                </button>
+              </span>
             ))}
           </div>
+          <form
+            className="flex flex-wrap gap-2"
+            aria-label="Add ticker"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const data = new FormData(e.currentTarget)
+              onAddSymbol({
+                symbol: String(data.get('symbol')),
+                name: String(data.get('name')),
+                kind: ASSET_KINDS.find((k) => k === data.get('kind')) ?? 'stock',
+              })
+              e.currentTarget.reset()
+            }}
+          >
+            <input
+              name="symbol"
+              required
+              placeholder="Symbol"
+              aria-label="Symbol"
+              className="w-28 rounded-md border border-line bg-transparent px-2 py-1 text-sm uppercase"
+            />
+            <input
+              name="name"
+              placeholder="Name (optional)"
+              aria-label="Name"
+              className="w-56 rounded-md border border-line bg-transparent px-2 py-1 text-sm"
+            />
+            <select
+              name="kind"
+              aria-label="Kind"
+              className="rounded-md border border-line bg-transparent px-2 py-1 text-sm"
+            >
+              {ASSET_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-md border border-line px-3 py-1 text-sm hover:border-accent">
+              Add ticker
+            </button>
+          </form>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex gap-1" role="group" aria-label="Grid style">
               {GRID_COLUMNS.map((c) => (

@@ -2,20 +2,25 @@ import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from '../../common/units/Skeleton.tsx'
 import { findGaps, reachableStart } from '../../domain/price-cache/fetchPlan.ts'
 import { deriveQuote, hasFullHistory } from '../../domain/price-cache/priceCache.ts'
+import type { AssetKind } from '../../domain/market-data/marketDataProvider.ts'
 import { usePriceCache } from '../../session/PriceCacheContext.ts'
-import { rangeStart, requestedStart, WATCHLIST, type Range } from './constants.ts'
+import { rangeStart, requestedStart, type Range } from './constants.ts'
 import { padPrices } from './padPrices.ts'
 import { rangeChange } from './performance.ts'
 import { PriceChart } from './PriceChart.tsx'
-import { cacheQuery, kindOf } from './queries.ts'
+import { cacheQuery } from './queries.ts'
 import { QuoteSummary } from './QuoteSummary.tsx'
 
 export function TickerCard({
   symbol,
+  name,
+  kind,
   range,
   allStart,
 }: {
   symbol: string
+  name?: string
+  kind: AssetKind
   range: Range
   /** Earliest date across all shown tickers; the scale for the All range. */
   allStart?: string
@@ -24,7 +29,6 @@ export function TickerCard({
   const cache = useQuery(cacheQuery(priceCache, symbol))
   const entry = cache.data
   const daily = entry?.prices
-  const name = WATCHLIST.find((w) => w.symbol === symbol)?.name
 
   const quote = daily && deriveQuote(symbol, daily)
   const performance = rangeChange(quote?.price, daily, range, allStart)
@@ -37,14 +41,14 @@ export function TickerCard({
   const wanted = requestedStart(range, today)
   // On the free plan stocks stop ~100 trading days back, however long the range is.
   const limited =
-    reachableStart(kindOf(symbol), wanted, today, priceCache.fullHistory) !== wanted
+    reachableStart(kind, wanted, today, priceCache.fullHistory) !== wanted
   const gapped =
     entry !== undefined &&
     entry !== null &&
     findGaps({
       entry,
-      kind: kindOf(symbol),
-      start: reachableStart(kindOf(symbol), wanted, today, priceCache.fullHistory),
+      kind: kind,
+      start: reachableStart(kind, wanted, today, priceCache.fullHistory),
       today,
     }).length > 0
   // The cache keeps newest first; charts read oldest to newest.

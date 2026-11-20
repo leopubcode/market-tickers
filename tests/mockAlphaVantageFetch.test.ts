@@ -44,8 +44,8 @@ describe("mock Alpha Vantage server", () => {
   });
 
   it("serves every watchlist ticker, with short history for recent IPOs", async () => {
-    const { WATCHLIST } = await import("../src/features/dashboard/constants.ts");
-    for (const { symbol } of WATCHLIST) {
+    const { DEFAULT_WATCHLIST } = await import("../src/features/dashboard/constants.ts");
+    for (const { symbol } of DEFAULT_WATCHLIST) {
       assert.equal((await client.getQuote(symbol)).symbol, symbol);
     }
     const raw = createMockAlphaVantageFetch({ latencyMs: 0, now: () => NOW });

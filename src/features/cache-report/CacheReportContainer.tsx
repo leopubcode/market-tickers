@@ -4,15 +4,17 @@ import { planCallId, type PlanTarget } from '../../domain/price-cache/fetchPlan.
 import { usePriceCache } from '../../session/PriceCacheContext.ts'
 import { downloadText } from '../../common/download.ts'
 import type { BuildOutcome } from '../../services/PriceCacheService.ts'
-import { requestedStart, WATCHLIST, type Range } from '../dashboard/constants.ts'
+import { requestedStart, type Range, type WatchlistItem } from '../dashboard/constants.ts'
 import { CacheReport } from './CacheReport.tsx'
 
 export function CacheReportContainer({
   targets,
+  watchlist,
   range,
   dialogRef,
 }: {
   targets: readonly PlanTarget[]
+  watchlist: readonly WatchlistItem[]
   range: Range
   /** The dialog element, so a menu elsewhere can open it. */
   dialogRef: RefObject<HTMLDialogElement | null>
@@ -40,6 +42,8 @@ export function CacheReportContainer({
         setOutcomes((cur) => ({ ...cur, [outcome.symbol]: outcome }))
         if (outcome.status === 'done') {
           void queryClient.invalidateQueries({ queryKey: ['cache', outcome.symbol] })
+          // Drop the finished call from the report now, not when the whole build ends.
+          void queryClient.invalidateQueries({ queryKey: ['cache-plan'] })
         }
       }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['cache-plan'] }),
@@ -83,7 +87,7 @@ export function CacheReportContainer({
       rows={items.map((call) => ({
         id: planCallId(call),
         call,
-        name: WATCHLIST.find((w) => w.symbol === call.symbol)?.name,
+        name: watchlist.find((w) => w.symbol === call.symbol)?.name,
         request: priceCache.describe(call),
         outcome: outcomes[call.symbol],
       }))}

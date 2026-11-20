@@ -3,8 +3,9 @@ import { useRef } from 'react'
 import { Dashboard } from './Dashboard.tsx'
 import {
   GRID_COLUMNS,
+  DEFAULT_WATCHLIST,
   RANGES,
-  WATCHLIST,
+  type WatchlistItem,
   type GridColumns,
   type RangeKey,
 } from './constants.ts'
@@ -17,19 +18,25 @@ import { SettingsDialogContainer } from '../vault/SettingsDialogContainer.tsx'
 import { cacheQuery, kindOf } from './queries.ts'
 import { TickerCard } from './TickerCard.tsx'
 import { usePersistedState } from './usePersistedState.ts'
+import { addToWatchlist, isWatchlist } from './watchlist.ts'
 
 export default function DashboardPage() {
   const priceCache = usePriceCache()
   const { lock } = useSession()
   const cacheDialog = useRef<HTMLDialogElement>(null)
   const settingsDialog = useRef<HTMLDialogElement>(null)
-  const [selected, setSelected] = usePersistedState<string[]>(
-    'ticker-stocks:selected',
-    [WATCHLIST[0].symbol],
-    (v): v is string[] =>
-      Array.isArray(v) &&
-      v.every((s) => WATCHLIST.some((w) => w.symbol === s)),
+  const [watchlist, setWatchlist] = usePersistedState<WatchlistItem[]>(
+    'ticker-stocks:watchlist',
+    [...DEFAULT_WATCHLIST],
+    isWatchlist,
   )
+  const [storedSelected, setSelected] = usePersistedState<string[]>(
+    'ticker-stocks:selected',
+    [DEFAULT_WATCHLIST[0].symbol],
+    (v): v is string[] => Array.isArray(v) && v.every((s) => typeof s === 'string'),
+  )
+  // A removed ticker may still be in the stored selection.
+  const selected = storedSelected.filter((s) => watchlist.some((w) => w.symbol === s))
   const [columns, setColumns] = usePersistedState<GridColumns>(
     'ticker-stocks:columns',
     2,
@@ -73,20 +80,38 @@ export default function DashboardPage() {
     )
 
   const toggleAll = () =>
-    setSelected((cur) =>
-      cur.length === WATCHLIST.length ? [] : WATCHLIST.map((s) => s.symbol),
-    )
+    setSelected(selected.length === watchlist.length ? [] : watchlist.map((s) => s.symbol))
+
+  const addSymbol = (input: Parameters<typeof addToWatchlist>[1]) => {
+    const next = addToWatchlist(watchlist, input)
+    if (next.length === watchlist.length) return
+    setWatchlist(next)
+    // Show the new ticker right away.
+    setSelected([...selected, next[next.length - 1].symbol])
+  }
+
+  const removeSymbol = (symbol: string) =>
+    setWatchlist(watchlist.filter((w) => w.symbol !== symbol))
 
   const renderCard = (symbol: string) => (
-    <TickerCard key={symbol} symbol={symbol} range={range} allStart={allStart} />
+    <TickerCard
+      key={symbol}
+      symbol={symbol}
+      name={watchlist.find((w) => w.symbol === symbol)?.name}
+      kind={kindOf(watchlist, symbol)}
+      range={range}
+      allStart={allStart}
+    />
   )
 
   return (
     <Dashboard
-      symbols={WATCHLIST}
+      symbols={watchlist}
       selected={selected}
       onToggleSymbol={toggleSymbol}
       onToggleAll={toggleAll}
+      onAddSymbol={addSymbol}
+      onRemoveSymbol={removeSymbol}
       columns={columns}
       onSelectColumns={setColumns}
       ranges={RANGES}
@@ -94,7 +119,8 @@ export default function DashboardPage() {
       onSelectRange={setRangeKey}
       cacheReport={
         <CacheReportContainer
-          targets={selected.map((symbol) => ({ symbol, kind: kindOf(symbol) }))}
+          targets={selected.map((symbol) => ({ symbol, kind: kindOf(watchlist, symbol) }))}
+          watchlist={watchlist}
           range={range}
           dialogRef={cacheDialog}
         />
